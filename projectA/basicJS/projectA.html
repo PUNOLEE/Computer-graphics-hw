@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project A</title>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="600" height="600">
+      <! Canvas size in pixels -->
+      Please use a browser that supports HTML-5 "canvas"
+    </canvas>
+
+    <div>
+      Type moving speed here!!! <input id="userInput" size="10" />
+      <button type="button" onClick="submitA()">Submit</button>
+    </div>
+
+    <! Load webGL-supplied libraries  >
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <! Load our textbook-supplied libraries>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix-quat03.js"></script>
+
+    <! Load OUR 3D graphics drawing program: lib1 by Vincent Bommier, 2018>
+    <script src="lib1.js"></script>
+    <! to simplify drawing colorful triangles in 3D>
+
+    <script src="projectA.js"></script>
+    <! OUR program >
+  </body>
+</html>
