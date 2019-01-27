@@ -166,7 +166,7 @@ function draw(gl) {
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   var base = 0.2;
-  modelMatrix.setTranslate(0.0, 0.0, 0.0); 
+  modelMatrix.setTranslate(0.0, 0.5, 0.0); 
 
   modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
   
@@ -177,6 +177,7 @@ function draw(gl) {
 
   modelMatrix.translate(0.0, 0.31, 0.34); 
   modelMatrix.translate(0.5, 0.0, 0.0);
+  modelMatrix.rotate(currentAngle, 1, 1, 0);
 
   drawMess(gl, two);
 
@@ -195,11 +196,12 @@ function drawMess(gl, size) {
   updateModelMatrix(modelMatrix);
 
   // Draw the mess
-  gl.drawArrays(gl.LINE_LOOP,0,20);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,180);
   
   modelMatrix = popMatrix(); // Retrieve the model matrix 
 
   // Draw heart
+  modelMatrix.translate(-0.5, -0.5, 0.0);
   drawHeart(gl,size);
 
 }
@@ -214,7 +216,7 @@ function drawHeart(gl, size){
   modelMatrix.translate(heartX, heartY, 0.0);
 
   updateModelMatrix(modelMatrix);
-  gl.drawArrays(gl.LINE_STRIP,20,350);
+  gl.drawArrays(gl.TRIANGLE_FAN,180,350*2);
   modelMatrix = popMatrix(); // Retrieve the model matrix
 }
 
@@ -239,6 +241,13 @@ function animate() {
   }
 }
 
+var color = [
+    1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,
+    1.0, 0.5, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4, 
+    1.0, 0.5, 1.0,  0.4, 1.0, 0.4,  1.0, 0.5, 1.0,  0.4, 1.0, 1.0, 
+    1.0, 0.4, 0.4,  0.4, 0.4, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 0.4, 
+    1.0, 0.4, 0.4,  0.4, 1.0, 0.4,  1.0, 0.4, 0.4,  0.4, 1.0, 0.4 
+  ];
 
 function makeHeart(){
   var data = [];
@@ -248,15 +257,13 @@ function makeHeart(){
     t = i;
     x = 16 * Math.pow(Math.sin(t),3);
     y = 13 * Math.cos(t) - 5* Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)
-    data = data.concat([x/10,y/10,0.0,1.0]);
+    data = data.concat([x/10,y/10,0.5,1.0]);
+    data = data.concat([x/10,y/10,-0.0,1.0]);
   }
 
   var colors = [];
-
-  for(let j=0;j<360;j++){
-      colors.push(1.0);
-      colors.push(0.4);
-      colors.push(0.4);
+  for(var i = 0; i< 36; i++){
+    colors.push.apply(colors, color);
   }
 
   appendPositions(data);
@@ -266,50 +273,74 @@ function makeHeart(){
 }
 
 function makeMess(){
+  // Refer to https://en.wikipedia.org/wiki/Dodecahedron
+  // https://en.wikipedia.org/wiki/Regular_dodecahedron
+  // -1<=x<+1 -1<=y<+1 -1<=z<+1
+  var h = ( Math.sqrt(5)-1) / 2; //  golden ratio 
+  var a = 1 / Math.sqrt(3); // 1
+  var b = a / h; // 1/ϕ
+  var c = a * h; // ϕ
+ 
+  
+  var vertices = [];
 
-  // calculated from a dodecahedron
-   var t = (1 + Math.sqrt(5)) / 2;
-    var r = 1 / t;
-  //20 vertices
-  var verticesPos = [
-    // (±1, ±1, ±1)
-    -1, -1, -1, 1,
-     -1, -1, 1, 1,  
-     -1, 1, -1,1,  
-     -1, 1, 1,1,
-     1, -1, -1, 1,  
-      1, -1, 1, 1,   
-      1, 1, -1,1,  
-      1, 1, 1,1,
-
-    // (0, ±1/φ, ±φ)
-     0, -r, -t,1, 
-      0, -r, t,1, 
-       0, r, -t,1,  
-       0, r, t,1,
-
-    // (±1/φ, ±φ, 0) 
-    -r, -t,  0,1,  
-    -r,  t, 0,1,  
-    r, -t, 0,1,   
-    r, t, 0,1,
-
-    // (±φ, 0, ±1/φ)
-    -t,  0, -r,1,  
-    t,  0, -r,1, 
-    -t, 0, r,1,  
-    t, 0, r,1,
+  var egdeVs = [
+     a,  a,  a,   0,  b,  c,  -a,  a,  a,  -c,  0,  b,   c,  0,  b,
+    -a, -a,  a,   0, -b,  c,   a, -a,  a,   c,  0,  b,  -c,  0,  b,
+     a, -a, -a,   0, -b, -c,  -a, -a, -a,  -c,  0, -b,   c,  0, -b,
+    -a,  a, -a,   0,  b, -c,   a,  a, -a,   c,  0, -b,  -c,  0, -b,
+     0,  b, -c,   0,  b,  c,   a,  a,  a,   1,  c,  0,   a,  a, -a,
+     0,  b,  c,   0,  b, -c,  -a,  a, -a,  -1,  c,  0,  -a,  a,  a,
+     0, -b, -c,   0, -b,  c,  -a, -a,  a,  -1, -c,  0,  -a, -a, -a,
+     0, -b,  c,   0, -b, -c,   a, -a, -a,   1, -c,  0,   a, -a,  a,
+     a,  a,  a,   c,  0,  b,   a, -a,  a,   1, -c,  0,   1,  c,  0,
+     a, -a, -a,   c,  0, -b,   a,  a, -a,   1,  c,  0,   1, -c,  0,
+    -a,  a, -a,  -c,  0, -b,  -a, -a, -a,  -1, -c,  0,  -1,  c,  0,
+    -a, -a,  a,  -c,  0,  b,  -a,  a,  a,  -1,  c,  0,  -1, -c,  0
   ];
 
-  var colors = [
-    1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0,
-    1.0, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 
-    1.0, 1.0, 1.0, 0.4, 1.0, 1.0, 1.0, 1.0, 1.0, 0.4, 1.0, 1.0, 
-    1.0, 0.4, 0.4, 0.4, 0.4, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 0.4, 
-    1.0, 0.4, 0.4, 0.4, 1.0, 0.4, 1.0, 0.4, 0.4, 0.4, 1.0, 0.4 
-  ];
+  for (var i = 0; i <egdeVs.length; i += 15) {
+    var a = [egdeVs[i],egdeVs[i + 1],egdeVs[i + 2]];
+    var b = [egdeVs[i + 3],egdeVs[i + 4],egdeVs[i + 5]];
+    var c = [egdeVs[i + 6],egdeVs[i + 7],egdeVs[i + 8]];
+    var d = [egdeVs[i + 9],egdeVs[i + 10],egdeVs[i + 11]];
+    var e = [egdeVs[i + 12],egdeVs[i + 13],egdeVs[i + 14]];
+    var center = [
+      (a[0] + b[0] + c[0] + d[0] + e[0]) / 5,
+      (a[1] + b[1] + c[1] + d[1] + e[1]) / 5,
+      (a[2] + b[2] + c[2] + d[2] + e[2]) / 5
+    ];
 
-   appendPositions(verticesPos);
+    // 5 triangles
+    vertices.push.apply(vertices, a);vertices.push(1.0);
+    vertices.push.apply(vertices, b);vertices.push(1.0);
+    vertices.push.apply(vertices, center);vertices.push(1.0);
 
-   appendColors(colors);
+    vertices.push.apply(vertices, b);vertices.push(1.0);
+    vertices.push.apply(vertices, c);vertices.push(1.0);
+    vertices.push.apply(vertices, center);vertices.push(1.0);
+
+    vertices.push.apply(vertices, c);vertices.push(1.0);
+    vertices.push.apply(vertices, d);vertices.push(1.0);
+    vertices.push.apply(vertices, center);vertices.push(1.0);
+
+    vertices.push.apply(vertices, d);vertices.push(1.0);
+    vertices.push.apply(vertices, e);vertices.push(1.0);
+    vertices.push.apply(vertices, center);vertices.push(1.0);
+
+    vertices.push.apply(vertices, e);vertices.push(1.0);
+    vertices.push.apply(vertices, a);vertices.push(1.0);
+    vertices.push.apply(vertices, center);vertices.push(1.0);
+  }
+
+  var verticesColors = [];
+  
+  for(var i = 0; i< 36; i++){
+    verticesColors.push.apply(verticesColors, color);
+  }
+  
+
+   appendPositions(vertices);
+
+   appendColors(verticesColors);
 }
