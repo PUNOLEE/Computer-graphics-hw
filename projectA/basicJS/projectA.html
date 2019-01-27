@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Project A-in a mess</title>
+    <title>Project A</title>
   </head>
 
   <body onload="main()">
@@ -16,8 +16,11 @@
       <button type="button" onClick="submitA()">Submit</button><BR /> Type heart
       moving speed here!!! <input id="userInputHeart" size="10" />
       <button type="button" onClick="submitB()">Submit</button><BR /> Hit <- ->
-      to change messes' rotation angle<BR /> Hit ^ v to change messes' Y
-      position<BR /> Hit A D to change hearts' position<BR> Hit W S to change hearts' size
+      to change Dodecahedrons' rotation angle<BR /> Hit ^ v to change Dodecahedrons' Y
+      position<BR /> Hit A D to change hearts' position<BR> Hit W S to change hearts' size<BR>
+          <span id='MouseAtResult'> Mouse At:   </span> <!-- myMouseMove() modifies this span object -->
+    <br>
+    <span id='MouseDragResult'> Mouse Drag: </span> <!-- myMouseUp() modifies this span object -->
     </div>
 
     <! Load webGL-supplied libraries  >

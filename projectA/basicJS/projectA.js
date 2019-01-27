@@ -36,15 +36,15 @@ function main() {
   };
   // onmousedown listener
   canvas.onmousedown = function(ev) {
-    myMouseDown(ev, gl, canvas);
+    myMouseDown(ev, canvas);
   };
   // onmousemove listener
   canvas.onmousemove = function(ev) {
-    myMouseMove(ev, gl, canvas);
+    myMouseMove(ev, canvas);
   };
   // onmouseup listener
   canvas.onmouseup = function(ev) {
-    myMouseUp(ev, gl, canvas);
+    myMouseUp(ev, canvas);
   };
 
   //tick function -> animation
@@ -75,58 +75,96 @@ function submitB() {
   document.getElementById("userInputHeart").value = "";
 }
 
-function myMouseDown(ev, gl, canvas) {// Called when user PRESSES down any mouse button;
+function myMouseDown(ev, canvas) {
+//==============================================================================
+// Called when user PRESSES down any mouse button;
+//                  (Which button?    console.log('ev.button='+ev.button);   )
+//    ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+//    pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+
+// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var w = canvas.width;
-  var h = canvas.height;
-
-  var canvasX =
-    (ev.clientX - rect.left - w / 2) / (w / 2); // normalize canvas to -1 <= x < +1,
-  var canvasY =
-    (h / 2 - (ev.clientY - rect.top)) / (h / 2); //  -1 <= y < +1.
-
-  isDrag = true; // set our mouse-dragging flag
+  var xp = ev.clientX - rect.left;                    // x==0 at canvas left edge
+  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+//  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
+  
+  // Convert to Canonical View Volume (CVV) coordinates too:
+  var x = (xp - canvas.width/2)  /    // move origin to center of canvas and
+               (canvas.width/2);      // normalize canvas to -1 <= x < +1,
+  var y = (yp - canvas.height/2) /    //                     -1 <= y < +1.
+               (canvas.height/2);
+//  console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+  
+  isDrag = true;                    // set our mouse-dragging flag
   if(isDrag)
     console.log("you are dragging your mess");
-  xMouseclik = canvasX; // record where mouse-dragging began
-  yMouseclik = canvasY;
-}
+  xMouseclik = x;                       // record where mouse-dragging began
+  yMouseclik = y;                       // using global vars (above main())
+    document.getElementById('MouseAtResult').innerHTML = 
+  'myMouseDown() at CVV coords x,y = '+x+', '+y;
+};
 
-function myMouseMove(ev, gl, canvas) {// Called when user MOVES the mouse with a button already pressed down.
-  
-  if (isDrag == false) {
-    return;
-  }
+function myMouseMove(ev, canvas) {
+//==============================================================================
+// Called when user MOVES the mouse with a button already pressed down.
+//                  (Which button?   console.log('ev.button='+ev.button);    )
+//    ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+//    pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+
+  if(isDrag==false) return;     // IGNORE all mouse-moves except 'dragging'
+
+  // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var w = canvas.width;
-  var h = canvas.height;
-
-  var canvasX =
-    (ev.clientX - rect.left - w/ 2) / (w / 2); // normalize canvas to -1 <= x < +1,
-  var canvasY =
-    (h / 2 - (ev.clientY - rect.top)) / (h / 2); // -1 <= y < +1
+  var xp = ev.clientX - rect.left;                    // x==0 at canvas left edge
+  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+//  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+  
+  // Convert to Canonical View Volume (CVV) coordinates too:
+  var x = (xp - canvas.width/2)  /    // move origin to center of canvas and
+               (canvas.width/2);      // normalize canvas to -1 <= x < +1,
+  var y = (yp - canvas.height/2) /    //                     -1 <= y < +1.
+               (canvas.height/2);
+//  console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
 
   // find how far we dragged the mouse:
-  myX += canvasX - xMouseclik; // Accumulate change-in-mouse-position,&
-  myY += canvasY - yMouseclik;
-  xMouseclik = canvasX; // Make next drag-measurement from here.
-  yMouseclik = canvasY;
-}
+  myX += (x - xMouseclik);      // Accumulate change-in-mouse-position,&
+  myY += (y - yMouseclik);
+  xMouseclik = x;                       // Make next drag-measurement from here.
+  yMouseclik = y;
+// (? why no 'document.getElementById() call here, as we did for myMouseDown()
+// and myMouseUp()? Because the webpage doesn't get updated when we move the 
+// mouse. Put the web-page updating command in the 'tick()' function instead)
+};
+function myMouseUp(ev,canvas) {
+//==============================================================================
+// Called when user RELEASES mouse button pressed previously.
+//                  (Which button?   console.log('ev.button='+ev.button);    )
+//    ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+//    pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
 
-function myMouseUp(ev, gl, canvas) {// Called when user LEAVES any mouse button;
+// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var w = canvas.width;
-  var h = canvas.height;
-  var canvasX =
-    (ev.clientX - rect.left - w/ 2) / (w / 2); // normalize canvas to -1 <= x < +1,
-  var canvasY =
-    (h / 2 - (ev.clientY - rect.top)) / (h / 2); // -1 <= y < +1
+  var xp = ev.clientX - rect.left;                    // x==0 at canvas left edge
+  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+//  console.log('myMouseUp  (pixel coords): xp,yp=\t',xp,',\t',yp);
+  
+  // Convert to Canonical View Volume (CVV) coordinates too:
+  var x = (xp - canvas.width/2)  /    // move origin to center of canvas and
+               (canvas.width/2);      // normalize canvas to -1 <= x < +1,
+  var y = (yp - canvas.height/2) /    //                     -1 <= y < +1.
+               (canvas.height/2);
+  console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
+  
+  isDrag = false;                     // CLEAR our mouse-dragging flag, and
+  // accumulate any final bit of mouse-dragging we did:
+  myX += (x - xMouseclik);
+  myY += (y - yMouseclik);
+  console.log('myMouseUp: xMdragTot,yMdragTot =',myX,',\t', myY);
+  // Put it on our webpage too...
+  document.getElementById('MouseAtResult').innerHTML = 
+  'myMouseUp(       ) at CVV coords x,y = '+x+', '+y;
+};
 
-  isDrag = false;
-  myX += canvasX - xMouseclik;
-  myY += canvasY - yMouseclik;
-
-}
 
 function keydown(ev, gl) {// Called when user hits any key button;
   console.log("You are hitting keyboard ")
@@ -181,6 +219,9 @@ function draw(gl) {
 
   drawMess(gl, two);
 
+ // Report mouse-drag totals on-screen:
+    document.getElementById('MouseDragResult').innerHTML=
+      'Mouse Drag totals (CVV coords):\t' + myX+', \t' + myY; 
   
 }
 
@@ -242,11 +283,11 @@ function animate() {
 }
 
 var color = [
-    1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,
-    1.0, 0.5, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4, 
-    1.0, 0.5, 1.0,  0.4, 1.0, 0.4,  1.0, 0.5, 1.0,  0.4, 1.0, 1.0, 
-    1.0, 0.4, 0.4,  0.4, 0.4, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 0.4, 
-    1.0, 0.4, 0.4,  0.4, 1.0, 0.4,  1.0, 0.4, 0.4,  0.4, 1.0, 0.4 
+    1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 1.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
+    1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 1.0, 1.0,  0.6, 0.8, 1.0, 1.0,  
+    0.8, 0.3, 1.9, 1.0,  0.6, 1.0, 0.4, 1.0,  1.0, 1.0, 1.0, 1.0,  
+    0.9, 0.5, 1.0, 1.0,  1.0, 0.5, 1.0, 1.0,  0.4, 0.8, 1.0, 1.0, 
+    1.0, 1.0, 1.0, 1.0,  0.4, 0.4, 1.0, 1.0,  0.6, 1.0, 1.0, 1.0
   ];
 
 function makeHeart(){
@@ -262,7 +303,7 @@ function makeHeart(){
   }
 
   var colors = [];
-  for(var i = 0; i< 36; i++){
+  for(var i = 0; i< 48; i++){
     colors.push.apply(colors, color);
   }
 
@@ -284,58 +325,49 @@ function makeMess(){
   
   var vertices = [];
 
-  var egdeVs = [
+  // 12 faces
+  var faces = [
      a,  a,  a,   0,  b,  c,  -a,  a,  a,  -c,  0,  b,   c,  0,  b,
     -a, -a,  a,   0, -b,  c,   a, -a,  a,   c,  0,  b,  -c,  0,  b,
      a, -a, -a,   0, -b, -c,  -a, -a, -a,  -c,  0, -b,   c,  0, -b,
     -a,  a, -a,   0,  b, -c,   a,  a, -a,   c,  0, -b,  -c,  0, -b,
+
      0,  b, -c,   0,  b,  c,   a,  a,  a,   1,  c,  0,   a,  a, -a,
      0,  b,  c,   0,  b, -c,  -a,  a, -a,  -1,  c,  0,  -a,  a,  a,
      0, -b, -c,   0, -b,  c,  -a, -a,  a,  -1, -c,  0,  -a, -a, -a,
      0, -b,  c,   0, -b, -c,   a, -a, -a,   1, -c,  0,   a, -a,  a,
+
      a,  a,  a,   c,  0,  b,   a, -a,  a,   1, -c,  0,   1,  c,  0,
      a, -a, -a,   c,  0, -b,   a,  a, -a,   1,  c,  0,   1, -c,  0,
     -a,  a, -a,  -c,  0, -b,  -a, -a, -a,  -1, -c,  0,  -1,  c,  0,
     -a, -a,  a,  -c,  0,  b,  -a,  a,  a,  -1,  c,  0,  -1, -c,  0
   ];
 
-  for (var i = 0; i <egdeVs.length; i += 15) {
-    var a = [egdeVs[i],egdeVs[i + 1],egdeVs[i + 2]];
-    var b = [egdeVs[i + 3],egdeVs[i + 4],egdeVs[i + 5]];
-    var c = [egdeVs[i + 6],egdeVs[i + 7],egdeVs[i + 8]];
-    var d = [egdeVs[i + 9],egdeVs[i + 10],egdeVs[i + 11]];
-    var e = [egdeVs[i + 12],egdeVs[i + 13],egdeVs[i + 14]];
+  for (var i = 0; i <faces.length; i += 15) {
+    var a = [faces[i],faces[i + 1],faces[i + 2],1.0];
+    var b = [faces[i + 3],faces[i + 4],faces[i + 5],1.0];
+    var c = [faces[i + 6],faces[i + 7],faces[i + 8],1.0];
+    var d = [faces[i + 9],faces[i + 10],faces[i + 11],1.0];
+    var e = [faces[i + 12],faces[i + 13],faces[i + 14],1.0];
     var center = [
       (a[0] + b[0] + c[0] + d[0] + e[0]) / 5,
       (a[1] + b[1] + c[1] + d[1] + e[1]) / 5,
-      (a[2] + b[2] + c[2] + d[2] + e[2]) / 5
+      (a[2] + b[2] + c[2] + d[2] + e[2]) / 5,
+      1.0
     ];
 
-    // 5 triangles
-    vertices.push.apply(vertices, a);vertices.push(1.0);
-    vertices.push.apply(vertices, b);vertices.push(1.0);
-    vertices.push.apply(vertices, center);vertices.push(1.0);
-
-    vertices.push.apply(vertices, b);vertices.push(1.0);
-    vertices.push.apply(vertices, c);vertices.push(1.0);
-    vertices.push.apply(vertices, center);vertices.push(1.0);
-
-    vertices.push.apply(vertices, c);vertices.push(1.0);
-    vertices.push.apply(vertices, d);vertices.push(1.0);
-    vertices.push.apply(vertices, center);vertices.push(1.0);
-
-    vertices.push.apply(vertices, d);vertices.push(1.0);
-    vertices.push.apply(vertices, e);vertices.push(1.0);
-    vertices.push.apply(vertices, center);vertices.push(1.0);
-
-    vertices.push.apply(vertices, e);vertices.push(1.0);
-    vertices.push.apply(vertices, a);vertices.push(1.0);
-    vertices.push.apply(vertices, center);vertices.push(1.0);
+    // 5 triangles in one face, 15 vertices
+    vertices = vertices.concat(a).concat(b).concat(center);
+    vertices = vertices.concat(b).concat(c).concat(center);
+    vertices = vertices.concat(c).concat(d).concat(center);
+    vertices = vertices.concat(d).concat(e).concat(center);
+    vertices = vertices.concat(e).concat(a).concat(center);
+    
   }
 
   var verticesColors = [];
   
-  for(var i = 0; i< 36; i++){
+  for(var i = 0; i< 48; i++){
     verticesColors.push.apply(verticesColors, color);
   }
   
