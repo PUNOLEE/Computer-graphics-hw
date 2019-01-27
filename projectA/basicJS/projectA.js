@@ -9,9 +9,10 @@ var myX = 0.0;
 var myY = 0.0;
 var heartX = 0.0;
 var heartY = 0.0;
+var heartSize = 1;
 var currentAngle = 0.0;
 var cAngle2 = 0.0;
-var cAngle2Step = 100.0
+var cAngle2Step = 100.0;
 var right = true;
 
 function main() {
@@ -22,7 +23,7 @@ function main() {
 
   // Additional setup:
   gl.disable(gl.CULL_FACE); // SHOW BOTH SIDES of all triangles
-  gl.clearColor(0.25, 0.25, 0.25, 1); // set new screen-clear color, RGBA
+  gl.clearColor(0.25, 0.25, 0.35, 1); // set new screen-clear color, RGBA
   // (for WebGL framebuffer, not canvas)
 
    
@@ -75,24 +76,20 @@ function submitB() {
 }
 
 function myMouseDown(ev, gl, canvas) {// Called when user PRESSES down any mouse button;
-  
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var xp = ev.clientX - rect.left; // x==0 at canvas left edge
-  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+  var w = canvas.width;
+  var h = canvas.height;
 
-  // Convert to Canonical View Volume (CVV) coordinates too:
-  var cx =
-    (xp - canvas.width / 2) / // move origin to center of canvas and
-    (canvas.width / 2); // normalize canvas to -1 <= x < +1,
-  var cy =
-    (yp - canvas.height / 2) / //                     -1 <= y < +1.
-    (canvas.height / 2);
+  var canvasX =
+    (ev.clientX - rect.left - w / 2) / (w / 2); // normalize canvas to -1 <= x < +1,
+  var canvasY =
+    (h / 2 - (ev.clientY - rect.top)) / (h / 2); //  -1 <= y < +1.
 
   isDrag = true; // set our mouse-dragging flag
   if(isDrag)
     console.log("you are dragging your mess");
-  xMouseclik = cx; // record where mouse-dragging began
-  yMouseclik = cy;
+  xMouseclik = canvasX; // record where mouse-dragging began
+  yMouseclik = canvasY;
 }
 
 function myMouseMove(ev, gl, canvas) {// Called when user MOVES the mouse with a button already pressed down.
@@ -101,45 +98,44 @@ function myMouseMove(ev, gl, canvas) {// Called when user MOVES the mouse with a
     return;
   }
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var xp = ev.clientX - rect.left; // x==0 at canvas left edge
-  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+  var w = canvas.width;
+  var h = canvas.height;
 
-  // Convert to Canonical View Volume (CVV) coordinates too:
-  var cx =
-    (xp - canvas.width / 2) / // move origin to center of canvas and
-    (canvas.width / 2); // normalize canvas to -1 <= x < +1,
-  var cy =
-    (yp - canvas.height / 2) / //                     -1 <= y < +1.
-    (canvas.height / 2);
+  var canvasX =
+    (ev.clientX - rect.left - w/ 2) / (w / 2); // normalize canvas to -1 <= x < +1,
+  var canvasY =
+    (h / 2 - (ev.clientY - rect.top)) / (h / 2); // -1 <= y < +1
 
   // find how far we dragged the mouse:
-  myX += cx - xMouseclik; // Accumulate change-in-mouse-position,&
-  myY += cy - yMouseclik;
-  xMouseclik = cx; // Make next drag-measurement from here.
-  yMouseclik = cy;
+  myX += canvasX - xMouseclik; // Accumulate change-in-mouse-position,&
+  myY += canvasY - yMouseclik;
+  xMouseclik = canvasX; // Make next drag-measurement from here.
+  yMouseclik = canvasY;
 }
 
 function myMouseUp(ev, gl, canvas) {// Called when user LEAVES any mouse button;
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var xp = ev.clientX - rect.left; // x==0 at canvas left edge
-  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+  var w = canvas.width;
+  var h = canvas.height;
+  var canvasX =
+    (ev.clientX - rect.left - w/ 2) / (w / 2); // normalize canvas to -1 <= x < +1,
+  var canvasY =
+    (h / 2 - (ev.clientY - rect.top)) / (h / 2); // -1 <= y < +1
 
-  // Convert to Canonical View Volume (CVV) coordinates too:
-  var cx =
-    (xp - canvas.width / 2) / // move origin to center of canvas and
-    (canvas.width / 2); // normalize canvas to -1 <= x < +1,
-  var cy =
-    (yp - canvas.height / 2) / //                     -1 <= y < +1.
-    (canvas.height / 2);
   isDrag = false;
-  myX += cx - xMouseclik;
-  myY += cy - yMouseclik;
+  myX += canvasX - xMouseclik;
+  myY += canvasY - yMouseclik;
 
 }
 
 function keydown(ev, gl) {// Called when user hits any key button;
   console.log("You are hitting keyboard ")
   switch (ev.keyCode) {
+    case 87:
+      heartSize += step;
+      break;
+    case 83:
+      heartSize -= step;
     case 65: //a
       heartX -= step;
       break;
@@ -214,6 +210,7 @@ function drawHeart(gl, size){
   modelMatrix.rotate(cAngle2, 1, 1, 0); // Rotate around the x & y-axis
 
   modelMatrix.scale(size,size,size); 
+  modelMatrix.scale(heartSize,heartSize,heartSize); 
   modelMatrix.translate(heartX, heartY, 0.0);
 
   updateModelMatrix(modelMatrix);
@@ -231,14 +228,14 @@ function animate() {
   var newAngle = currentAngle + (ANGLE_STEP * elapsed) / 1000.0;
   currentAngle = (newAngle %= 360);
 
-   cAngle2 = cAngle2 + (cAngle2Step/1000.0) * elapsed; // advance;
-  if( cAngle2 < 20.0 ) { // did we go past lower limit?
-    cAngle2 = 20.0;                 // yes. Stop at limit, and
-    if(cAngle2Step < 0) cAngle2Step = -cAngle2Step; // go FORWARDS
+   cAngle2 = cAngle2 + (cAngle2Step * elapsed) / 1000.0; // advance;
+  if( cAngle2 < 20.0 ) { 
+    cAngle2 = 20.0;             
+    cAngle2Step = cAngle2Step < 0 ? -cAngle2Step: cAngle2Step; // go FORWARDS
     }
-  if( cAngle2 > 200.0 ) { // did we go past upper limit?
-   cAngle2 = 200.0;                 // yes. Stop at limit, and
-   if(cAngle2Step > 0) cAngle2Step = -cAngle2Step; // go BACKWARDS
+  if( cAngle2 > 200.0 ) { 
+   cAngle2 = 200.0;  
+   cAngle2Step = cAngle2Step > 0 ? -cAngle2Step: cAngle2Step; // go BACKWARDS
   }
 }
 
@@ -269,6 +266,8 @@ function makeHeart(){
 }
 
 function makeMess(){
+
+  // calculated from a dodecahedron
    var t = (1 + Math.sqrt(5)) / 2;
     var r = 1 / t;
   //20 vertices
