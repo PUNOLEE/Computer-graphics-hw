@@ -31,21 +31,16 @@ function main() {
    makeHeart();
    
   // onkeydown listener
-  document.onkeydown = function(ev) {
-    keydown(ev, gl);
-  };
+  window.addEventListener("keydown", (ev)=>keydown(ev, gl), false);
+
   // onmousedown listener
-  canvas.onmousedown = function(ev) {
-    myMouseDown(ev, canvas);
-  };
+  window.addEventListener("mousedown", (ev)=>myMouseDown(ev, canvas)); 
+ 
   // onmousemove listener
-  canvas.onmousemove = function(ev) {
-    myMouseMove(ev, canvas);
-  };
+  window.addEventListener("mousemove", (ev)=>myMouseMove(ev, canvas)); 
+
   // onmouseup listener
-  canvas.onmouseup = function(ev) {
-    myMouseUp(ev, canvas);
-  };
+  window.addEventListener("mouseup", (ev)=>myMouseUp(ev, canvas)); 
 
   //tick function -> animation
   var tick = function() {
@@ -169,13 +164,13 @@ function myMouseUp(ev,canvas) {
 function keydown(ev, gl) {// Called when user hits any key button;
   console.log("You are hitting keyboard ")
   switch (ev.keyCode) {
-    case 87:
+    case 87: //W
       heartSize += step;
       break;
-    case 83:
+    case 83: // S
       heartSize -= step;
     case 65: //a
-      heartX -= step;
+      heartY -= step;
       break;
     case 68: //d
       heartY += step;
