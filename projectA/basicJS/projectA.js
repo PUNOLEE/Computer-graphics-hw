@@ -130,6 +130,7 @@ function myMouseMove(ev, canvas) {
 // and myMouseUp()? Because the webpage doesn't get updated when we move the 
 // mouse. Put the web-page updating command in the 'tick()' function instead)
 };
+
 function myMouseUp(ev,canvas) {
 //==============================================================================
 // Called when user RELEASES mouse button pressed previously.
@@ -199,20 +200,34 @@ function draw(gl) {
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   var base = 0.2;
-  modelMatrix.setTranslate(0.0, 0.5, 0.0); 
+  modelMatrix.setTranslate(0.0, 0.3, 0.0); 
 
   modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
   
-  drawMess(gl, base);
+  drawMess(gl, base, 0, 1, 0);
 
+  pushMatrix(modelMatrix); 
 
   var two = 0.3;
 
-  modelMatrix.translate(0.0, 0.31, 0.34); 
-  modelMatrix.translate(0.5, 0.0, 0.0);
+  modelMatrix.translate(0.0, 0.28, 0.34); 
+  // modelMatrix.translate(0.5, 0.0, 0.0);
   modelMatrix.rotate(currentAngle, 1, 1, 0);
 
-  drawMess(gl, two);
+  drawMess(gl, two, 1, 1, 0);
+
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+
+  var third = 0.15;
+
+  modelMatrix.translate(0.39, 0.3, 0.43);
+  //modelMatrix.translate(0.5, 0.0, 0.0); 
+  modelMatrix.rotate(currentAngle, 1, 0, 1);
+
+  drawMess(gl, third, 1, 0, 1);
+  modelMatrix = popMatrix();
 
  // Report mouse-drag totals on-screen:
     document.getElementById('MouseDragResult').innerHTML=
@@ -221,7 +236,7 @@ function draw(gl) {
 }
 
 //draw single mess
-function drawMess(gl, size) {
+function drawMess(gl, size, x, y, z) {
   
   pushMatrix(modelMatrix);
 
@@ -236,23 +251,34 @@ function drawMess(gl, size) {
   
   modelMatrix = popMatrix(); // Retrieve the model matrix 
 
+
   // Draw heart
-  modelMatrix.translate(-0.5, -0.5, 0.0);
-  drawHeart(gl,size);
+  
+  drawHeart(gl,size, x, y, z);
 
 }
 
-function drawHeart(gl, size){
+function drawHeart(gl, size, x, y, z){
 
   pushMatrix(modelMatrix);
-  modelMatrix.rotate(cAngle2, 1, 1, 0); // Rotate around the x & y-axis
+  if(size === 0.2)
+    modelMatrix.setTranslate(-0.45, -0.1, 0.0);
+  else if(size === 0.3)
+    modelMatrix.setTranslate(0.02, -0.42, 0.0);
+  else modelMatrix.setTranslate(-0.5, -0.67, 0.0);
+  modelMatrix.rotate(-cAngle2, x, y, z); // Rotate around the x & y-axis
 
   modelMatrix.scale(size,size,size); 
   modelMatrix.scale(heartSize,heartSize,heartSize); 
   modelMatrix.translate(heartX, heartY, 0.0);
 
   updateModelMatrix(modelMatrix);
-  gl.drawArrays(gl.TRIANGLE_FAN,180,350*2);
+  if(size === 0.2)
+    gl.drawArrays(gl.LINE_STRIP,180,350*2);
+  else if(size === 0.3)
+    gl.drawArrays(gl.TRIANGLE_FAN,180,350*2);
+  else
+    gl.drawArrays(gl.LINES,180,350*2);
   modelMatrix = popMatrix(); // Retrieve the model matrix
 }
 
@@ -304,7 +330,7 @@ function makeHeart(){
 
   appendPositions(data);
   
-  appendColors(colors);
+  //appendColors(colors);
 
 }
 
