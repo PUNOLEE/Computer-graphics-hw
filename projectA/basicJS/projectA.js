@@ -14,6 +14,8 @@ var currentAngle = 0.0;
 var cAngle2 = 0.0;
 var cAngle2Step = 100.0;
 var right = true;
+var colorStep = 30.0;
+var currentColor = 0.0;
 
 function main() {
   var canvas = document.getElementById("webgl");
@@ -231,7 +233,7 @@ function draw(gl) {
 
  // Report mouse-drag totals on-screen:
     document.getElementById('MouseDragResult').innerHTML=
-      'Mouse Drag totals (CVV coords):\t' + myX+', \t' + myY; 
+      'Dodecahedrons position (CVV coords):\t' + myX+', \t' + myY; 
   
 }
 
@@ -288,9 +290,15 @@ function animate() {
   var now = Date.now();
   var elapsed = now - g_last;
   g_last = now;
+
   // Update the current rotation angle (adjusted by the elapsed time)
   var newAngle = currentAngle + (ANGLE_STEP * elapsed) / 1000.0;
   currentAngle = (newAngle %= 360);
+
+  var newColor = currentColor + (colorStep * elapsed) / 1000.0 *0.5;
+  currentColor = (newColor %= 255);
+
+  updateColorControl();
 
    cAngle2 = cAngle2 + (cAngle2Step * elapsed) / 1000.0; // advance;
   if( cAngle2 < 20.0 ) { 
@@ -303,12 +311,18 @@ function animate() {
   }
 }
 
+function updateColorControl(){
+  // change color over time
+  gl.uniform4f(u_RandomColor, Math.abs(currentColor/300 -0.2), Math.abs(currentColor/300 -0.5), Math.abs(currentColor/300 -0.6), 0.7); 
+
+}
+
 var color = [
-    1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 1.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
-    1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 1.0, 1.0,  0.6, 0.8, 1.0, 1.0,  
-    0.8, 0.3, 1.9, 1.0,  0.6, 1.0, 0.4, 1.0,  1.0, 1.0, 1.0, 1.0,  
-    0.9, 0.5, 1.0, 1.0,  1.0, 0.5, 1.0, 1.0,  0.4, 0.8, 1.0, 1.0, 
-    1.0, 1.0, 1.0, 1.0,  0.4, 0.4, 1.0, 1.0,  0.6, 1.0, 1.0, 1.0
+    1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 0.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
+    1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 0.0, 1.0,  0.6, 0.8, 1.0, 1.0,  
+    0.8, 0.3, 1.9, 1.0,  0.6, 1.0, 0.4, 1.0,  1.0, 1.0, 0.0, 1.0,  
+    0.0, 0.5, 1.0, 1.0,  1.0, 0.5, 1.0, 1.0,  0.4, 0.8, 1.0, 1.0, 
+    1.0, 1.0, 0.0, 1.0,  0.4, 0.4, 1.0, 1.0,  0.6, 1.0, 1.0, 1.0
   ];
 
 function makeHeart(){

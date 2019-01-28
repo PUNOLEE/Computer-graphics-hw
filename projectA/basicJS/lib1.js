@@ -13,11 +13,12 @@ var VSHADER_SOURCE =
 // Fragment shader program
 var FSHADER_SOURCE =
   '#ifdef GL_ES\n' +
-  'precision mediump float;\n' +
+  'precision highp float;\n' +
   '#endif\n' +
+  'uniform vec4 u_RandomColor;\n' +
   'varying vec4 v_Color;\n' +
   'void main() {\n' +
-  '  gl_FragColor = v_Color;\n' +
+  '  gl_FragColor = v_Color + u_RandomColor;\n' +
   '}\n';
 
 //global variables
@@ -34,6 +35,7 @@ var FSIZE = positions.BYTES_PER_ELEMENT;
 var ipos = icolors = ipointSizes = 0;
 var modelMatrix = new Matrix4();
 var u_ModelMatrix;
+var u_RandomColor;
 
 function init(){
   // Retrieve <canvas> element
@@ -53,6 +55,13 @@ function init(){
     return;
   }
 
+  u_RandomColor = gl.getUniformLocation(gl.program, 'u_RandomColor');
+  if (!u_RandomColor) {
+    console.log('lib1.js: init failed to get the storage location of u_RandomColor');
+    return;
+  }
+
+
   bufferSetup(gl);
 
   // Set the background-clearing color and enable the depth test
@@ -68,6 +77,8 @@ function init(){
     console.log('lib1.js: init failed to get the storage location of u_ModelMatrix');
     return;
   }
+  
+
   return gl;
 }
 
