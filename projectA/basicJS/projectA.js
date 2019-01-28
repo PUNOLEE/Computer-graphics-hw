@@ -16,6 +16,28 @@ var cAngle2Step = 100.0;
 var right = true;
 var colorStep = 30.0;
 var currentColor = 0.0;
+var heartSizeStep = 0.1;
+var text;
+
+var FizzyText = function() {
+  this.position = 'Position';
+  this.speed = 30.0;
+  this.heartSize = 1.0;
+  this.displayOutline = false;
+  this.explode = function() { };
+  // Define render logic ...
+};
+
+window.onload = function() {
+  text = new FizzyText();
+  main();
+  var gui = new dat.GUI();
+  
+  gui.add(text, 'position').listen();
+  gui.add(text, 'speed', -200, 200).onChange(setSpeed);
+  gui.add(text, 'heartSize', 0,1).onChange(setHeartSize);
+  gui.add(text, 'explode');
+};
 
 function main() {
   var canvas = document.getElementById("webgl");
@@ -36,14 +58,20 @@ function main() {
   window.addEventListener("keydown", (ev)=>keydown(ev, gl), false);
 
   // onmousedown listener
-  window.addEventListener("mousedown", (ev)=>myMouseDown(ev, canvas)); 
+  canvas.addEventListener("mousedown", (ev)=>myMouseDown(ev, canvas)); 
  
   // onmousemove listener
-  window.addEventListener("mousemove", (ev)=>myMouseMove(ev, canvas)); 
+  canvas.addEventListener("mousemove", (ev)=>myMouseMove(ev, canvas)); 
 
   // onmouseup listener
-  window.addEventListener("mouseup", (ev)=>myMouseUp(ev, canvas)); 
+  canvas.addEventListener("mouseup", (ev)=>myMouseUp(ev, canvas)); 
 
+  var update = function() {
+    requestAnimationFrame(update);
+    text.position =  myX +','+ myY;
+  };
+
+  update();
   //tick function -> animation
   var tick = function() {
     animate(); // Update the rotation angle
@@ -56,21 +84,15 @@ function main() {
 }
 
 //handle user input
-function submitA() {
-  var userInput = document.getElementById("userInput").value;
-  //set step using user input
-  ANGLE_STEP = userInput;
-  console.log("your mess moving speed now is " + ANGLE_STEP);
-  document.getElementById("userInput").value = "";
+function setSpeed(){
+  ANGLE_STEP = text.speed;
 }
 
-function submitB() {
-  var userInputHeart = document.getElementById("userInputHeart").value;
-  //set step using user input
-  cAngle2Step = userInputHeart;
-  console.log("your heart moving speed now is " + cAngle2Step);
-  document.getElementById("userInputHeart").value = "";
+function setHeartSize(){
+  heartSize = text.heartSize;
 }
+
+
 
 function myMouseDown(ev, canvas) {
 //==============================================================================
@@ -97,8 +119,7 @@ function myMouseDown(ev, canvas) {
     console.log("you are dragging your mess");
   xMouseclik = x;                       // record where mouse-dragging began
   yMouseclik = y;                       // using global vars (above main())
-    document.getElementById('MouseAtResult').innerHTML = 
-  'myMouseDown() at CVV coords x,y = '+x+', '+y;
+  
 };
 
 function myMouseMove(ev, canvas) {
@@ -167,11 +188,6 @@ function myMouseUp(ev,canvas) {
 function keydown(ev, gl) {// Called when user hits any key button;
   console.log("You are hitting keyboard ")
   switch (ev.keyCode) {
-    case 87: //W
-      heartSize += step;
-      break;
-    case 83: // S
-      heartSize -= step;
     case 65: //a
       heartY -= step;
       break;
@@ -199,24 +215,38 @@ function keydown(ev, gl) {// Called when user hits any key button;
 
 function draw(gl) {
   //draw images
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
 
-  var base = 0.2;
-  modelMatrix.setTranslate(0.0, 0.3, 0.0); 
+  modelMatrix.setTranslate(myX, myY, 0.0);
+
+
+  var base = 0.3;
+  modelMatrix.translate(0.4, 0.3, 0.0); 
 
   modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
   
-  drawMess(gl, base, 0, 1, 0);
+  drawMess(gl, base);
 
   pushMatrix(modelMatrix); 
 
-  var two = 0.3;
+  var two = 0.28;
 
-  modelMatrix.translate(0.0, 0.28, 0.34); 
-  // modelMatrix.translate(0.5, 0.0, 0.0);
-  modelMatrix.rotate(currentAngle, 1, 1, 0);
+  modelMatrix.translate(0.0, 0.3, 0.34); 
+  modelMatrix.rotate(90-currentAngle, 1, 1, 0);
 
-  drawMess(gl, two, 1, 1, 0);
+  drawMess(gl, two);
+
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+
+  var two = 0.28;
+
+  modelMatrix.translate(0.0, -0.3, -0.34); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 1, 1, 0);
+
+  drawMess(gl, two);
+
 
   modelMatrix = popMatrix();
 
@@ -224,26 +254,80 @@ function draw(gl) {
 
   var third = 0.15;
 
-  modelMatrix.translate(0.39, 0.3, 0.43);
+  modelMatrix.translate(-0.35, -0.3, -0.43);
   //modelMatrix.translate(0.5, 0.0, 0.0); 
-  modelMatrix.rotate(currentAngle, 1, 0, 1);
+  modelMatrix.rotate(cAngle2, 1, 0, 1);
 
-  drawMess(gl, third, 1, 0, 1);
+  drawMess(gl, third);
   modelMatrix = popMatrix();
 
- // Report mouse-drag totals on-screen:
-    document.getElementById('MouseDragResult').innerHTML=
-      'Dodecahedrons position (CVV coords):\t' + myX+', \t' + myY; 
+  pushMatrix(modelMatrix); 
+
+  var third = 0.15;
+
+  modelMatrix.translate(0.35, 0.3, 0.43);
+  //modelMatrix.translate(0.5, 0.0, 0.0); 
+  modelMatrix.rotate(cAngle2, 1, 0, 1);
+
+  drawMess(gl, third);
+  modelMatrix = popMatrix();
+
+//draw heart
+  modelMatrix.setTranslate(heartX, heartY, 0.0);
+  modelMatrix.scale(heartSize,heartSize,heartSize); 
+
+  pushMatrix(modelMatrix); 
+  var size = 0.15;
+  modelMatrix.translate(-0.5, 0.0, 0.0); 
+  modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+
+  drawheart(gl,size);
   
+  modelMatrix = popMatrix();
+  pushMatrix(modelMatrix); 
+
+   var sizeThird = 0.14;
+
+   modelMatrix.translate(-0.5, 0.1, -0.3); 
+   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate around the x & y-axis
+   modelMatrix.scale(0.6,0.6,0.6);   // Rotate around the x & y-axis
+   modelMatrix.translate(0.0, 0.23, 0.0); 
+
+   drawheart(gl,sizeThird);
+
+   modelMatrix = popMatrix();
+
+
+   pushMatrix(modelMatrix); 
+
+   modelMatrix.translate(-0.5, -0.35, 0.0); 
+   modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+
+   drawheart(gl,size);
+
+   modelMatrix = popMatrix();
+
+
+   pushMatrix(modelMatrix); 
+
+   var sizeSecond = 0.3;
+
+   modelMatrix.translate(-0.5, -0.45, 0.0); 
+   modelMatrix.rotate(-300, 1, 0, 0); // Rotate around the x & y-axis
+   modelMatrix.rotate(currentAngle, 0, 0, 1); // Rotate around the x & y-axis
+
+   drawheart(gl,sizeSecond);
+
+   modelMatrix = popMatrix();
+
 }
 
 //draw single mess
-function drawMess(gl, size, x, y, z) {
+function drawMess(gl, size) {
   
   pushMatrix(modelMatrix);
 
   modelMatrix.scale(size, size, size);
-  modelMatrix.translate(myX, myY, 0.0);
   // Calculate the model matrix
   // Pass the model matrix to u_ModelMatrix
   updateModelMatrix(modelMatrix);
@@ -253,29 +337,16 @@ function drawMess(gl, size, x, y, z) {
   
   modelMatrix = popMatrix(); // Retrieve the model matrix 
 
-
-  // Draw heart
-  
-  drawHeart(gl,size, x, y, z);
-
 }
 
-function drawHeart(gl, size, x, y, z){
+function drawheart(gl, size){
 
   pushMatrix(modelMatrix);
-  if(size === 0.2)
-    modelMatrix.setTranslate(-0.45, -0.1, 0.0);
-  else if(size === 0.3)
-    modelMatrix.setTranslate(0.02, -0.42, 0.0);
-  else modelMatrix.setTranslate(-0.5, -0.67, 0.0);
-  modelMatrix.rotate(-cAngle2, x, y, z); // Rotate around the x & y-axis
-
+  
   modelMatrix.scale(size,size,size); 
-  modelMatrix.scale(heartSize,heartSize,heartSize); 
-  modelMatrix.translate(heartX, heartY, 0.0);
 
   updateModelMatrix(modelMatrix);
-  if(size === 0.2)
+  if(size === 0.15)
     gl.drawArrays(gl.LINE_STRIP,180,350*2);
   else if(size === 0.3)
     gl.drawArrays(gl.TRIANGLE_FAN,180,350*2);
@@ -291,6 +362,17 @@ function animate() {
   var elapsed = now - g_last;
   g_last = now;
 
+  // Update the current heart size (adjusted by the elapsed time)
+  heartSize = heartSize + (heartSizeStep * elapsed) / 1000.0;
+  if(heartSize < 0.5){
+    heartSize=0.5;
+    heartSizeStep = heartSizeStep < 0 ? -heartSizeStep: heartSizeStep;
+  }
+  if(heartSize > 1.0){
+    heartSize=1.0;
+    heartSizeStep = heartSizeStep > 0 ? -heartSizeStep: heartSizeStep;
+  }
+
   // Update the current rotation angle (adjusted by the elapsed time)
   var newAngle = currentAngle + (ANGLE_STEP * elapsed) / 1000.0;
   currentAngle = (newAngle %= 360);
@@ -300,6 +382,7 @@ function animate() {
 
   updateColorControl();
 
+  // Update the current heart  rotation angle (adjusted by the elapsed time)
    cAngle2 = cAngle2 + (cAngle2Step * elapsed) / 1000.0; // advance;
   if( cAngle2 < 20.0 ) { 
     cAngle2 = 20.0;             

@@ -5,25 +5,17 @@
     <title>Project A</title>
   </head>
 
-  <body onload="main()">
-    <canvas id="webgl" width="600" height="600">
+  <body style="display: flex;flex-direction: column;background-color:#404059 ">
+    <canvas id="webgl" width="600" height="600" style="margin:0 auto">
       <! Canvas size in pixels -->
       Please use a browser that supports HTML-5 "canvas"
     </canvas>
 
-    <div>
-      Type dodecahedron moving speed here!!! <input id="userInput" size="10" />
-      <button type="button" onClick="submitA()">Submit</button><BR /> Type heart
-      moving speed here!!! <input id="userInputHeart" size="10" />
-      <button type="button" onClick="submitB()">Submit</button><BR /> Hit <- ->
+    <div style="text-align: center; color:white">
+     
+      Hit <- ->
       to change dodecahedrons' angle of rotation <BR /> Hit ^ v to change
       dodecahedrons' Y position<BR /> Hit A D to change hearts' Y position<BR />
-      Hit W S to change hearts' size<BR />
-      <span id="MouseAtResult"> Mouse At: </span>
-      <!-- myMouseMove() modifies this span object -->
-      <br />
-      <span id="MouseDragResult"> Mouse Drag: </span>
-      <!-- myMouseUp() modifies this span object -->
     </div>
 
     <! Load webGL-supplied libraries  >
@@ -39,5 +31,8 @@
 
     <script src="projectA.js"></script>
     <! OUR program >
+    <script type="text/javascript" src="../lib/dat.gui.min.js"></script>
+    <!DAT.GUI>
+
   </body>
 </html>
