@@ -19,24 +19,23 @@ var currentColor = 0.0;
 var heartSizeStep = 0.1;
 var text;
 
+//DAT.GUI
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
   this.heartSize = 1.0;
-  this.displayOutline = false;
-  this.explode = function() { };
-  // Define render logic ...
 };
 
 window.onload = function() {
+  // load controls and canvas
   text = new FizzyText();
   main();
   var gui = new dat.GUI();
-  
+  // add controls to GUI
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
   gui.add(text, 'heartSize', 0,1).onChange(setHeartSize);
-  gui.add(text, 'explode');
+
 };
 
 function main() {
@@ -66,6 +65,7 @@ function main() {
   // onmouseup listener
   canvas.addEventListener("mouseup", (ev)=>myMouseUp(ev, canvas)); 
 
+  //  update GUI's position message 
   var update = function() {
     requestAnimationFrame(update);
     text.position =  myX +','+ myY;
@@ -85,11 +85,15 @@ function main() {
 
 //handle user input
 function setSpeed(){
+  // set current speed when user changes speed control of GUI
   ANGLE_STEP = text.speed;
+  console.log("current speed:"+ Math.floor(text.speed));
 }
 
 function setHeartSize(){
+  // set current heart size when user changes heartSize control of GUI
   heartSize = text.heartSize;
+  console.log("current heartSize:"+  text.heartSize);
 }
 
 
@@ -112,11 +116,10 @@ function myMouseDown(ev, canvas) {
                (canvas.width/2);      // normalize canvas to -1 <= x < +1,
   var y = (yp - canvas.height/2) /    //                     -1 <= y < +1.
                (canvas.height/2);
-//  console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
   
   isDrag = true;                    // set our mouse-dragging flag
   if(isDrag)
-    console.log("you are dragging your mess");
+    console.log("you are dragging your bracelet");
   xMouseclik = x;                       // record where mouse-dragging began
   yMouseclik = y;                       // using global vars (above main())
   
@@ -135,7 +138,6 @@ function myMouseMove(ev, canvas) {
   var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
   var xp = ev.clientX - rect.left;                    // x==0 at canvas left edge
   var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
-//  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
   
   // Convert to Canonical View Volume (CVV) coordinates too:
   var x = (xp - canvas.width/2)  /    // move origin to center of canvas and
@@ -149,9 +151,6 @@ function myMouseMove(ev, canvas) {
   myY += (y - yMouseclik);
   xMouseclik = x;                       // Make next drag-measurement from here.
   yMouseclik = y;
-// (? why no 'document.getElementById() call here, as we did for myMouseDown()
-// and myMouseUp()? Because the webpage doesn't get updated when we move the 
-// mouse. Put the web-page updating command in the 'tick()' function instead)
 };
 
 function myMouseUp(ev,canvas) {
@@ -179,150 +178,201 @@ function myMouseUp(ev,canvas) {
   myX += (x - xMouseclik);
   myY += (y - yMouseclik);
   console.log('myMouseUp: xMdragTot,yMdragTot =',myX,',\t', myY);
-  // Put it on our webpage too...
-  document.getElementById('MouseAtResult').innerHTML = 
-  'myMouseUp(       ) at CVV coords x,y = '+x+', '+y;
 };
 
 
 function keydown(ev, gl) {// Called when user hits any key button;
-  console.log("You are hitting keyboard ")
   switch (ev.keyCode) {
-    case 65: //a
+    case 65: //a key
+      console.log(' a key.');
       heartY -= step;
+      console.log("heart dish Y pos:" + heartY);
       break;
-    case 68: //d
+    case 68: //d key
+      console.log(' d key.');
       heartY += step;
+      console.log("heart dish Y pos:" + heartY);
       break;
     case 40: // Up arrow key
+      console.log(' up-arrow.');
       myY -= step;
+      console.log("bracelet Y pos:" + myY);
       break;
     case 38: // Down arrow key
+      console.log(' down-arrow.');
       myY += step;
+      console.log("bracelet Y pos:" + myY);
       break;
     case 39: // Right arrow key -> the positive rotation around the y-axis
+      console.log(' right-arrow.');
       currentAngle = (currentAngle + 3.0) % 360;
+      console.log("bracelet currentAngle:" + currentAngle);
       break;
     case 37: // Left arrow key -> the negative rotation around the y-axis
+      console.log(' left-arrow.');
       currentAngle = (currentAngle - 3.0) % 360;
+      console.log("bracelet currentAngle:" + currentAngle);
       break;
     default:
       return; // Skip drawing at no effective action
   }
-  // Draw mess
+  // Draw all
   draw(gl);
 }
 
 function draw(gl) {
-  //draw images
-  gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
+  // Draw a new on-screen image.
 
+  // Be sure to clear the screen before re-drawing ...
+  gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
+  
+  // Let mouse-drag move the drawing axes before we do any other drawing:
   modelMatrix.setTranslate(myX, myY, 0.0);
 
-
-  var base = 0.3;
-  modelMatrix.translate(0.4, 0.3, 0.0); 
+  // spinning BASE dodecahedron;
+  // small ones
+  var base = 0.15;
+  modelMatrix.translate(0.42, 0.4, 0.0); 
 
   modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
   
   drawMess(gl, base);
 
   pushMatrix(modelMatrix); 
+  // Rocking 2nd dodecahedron:-----------------------------------
+  // larger one -- top of the base dodecahedron
+  var two = 0.2;
 
-  var two = 0.28;
-
-  modelMatrix.translate(0.0, 0.3, 0.34); 
-  modelMatrix.rotate(90-currentAngle, 1, 1, 0);
-
-  drawMess(gl, two);
-
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-
-  var two = 0.28;
-
-  modelMatrix.translate(0.0, -0.3, -0.34); 
-  modelMatrix.rotate(150.0 + 70-currentAngle, 1, 1, 0);
+  modelMatrix.translate(0.2, 0.18, 0.14); // move drawing axes to base dodecahedron's 
+                         // point: use this as the base dodecahedron's 'hinge point'
+                         // and make 'rocking' drawing axes pivot around it.
+  modelMatrix.rotate(90-currentAngle, 1, 1, 0); // 'rock' the drawing axes,
 
   drawMess(gl, two);
-
-
+ // END of Rocking 2nd dodecahedron:---------------------------- 
   modelMatrix = popMatrix();
 
   pushMatrix(modelMatrix); 
+// Rocking 3rd dodecahedron:-----------------------------------
+  // larger one -- bottom of the base dodecahedron
+  modelMatrix.translate(-0.16, -0.18, 0.14); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 1, 1, 0); // Rotate around the x & y-axis
 
-  var third = 0.15;
-
-  modelMatrix.translate(-0.35, -0.3, -0.43);
-  //modelMatrix.translate(0.5, 0.0, 0.0); 
-  modelMatrix.rotate(cAngle2, 1, 0, 1);
-
-  drawMess(gl, third);
+  drawMess(gl, two);
+ // END of Rocking 3rd dodecahedron:---------------------------- 
   modelMatrix = popMatrix();
 
   pushMatrix(modelMatrix); 
+// Rocking 4th dodecahedron:-----------------------------------
+  // small one -- next to the 3rd dodecahedron
+  modelMatrix.translate(-0.2, -0.48, 0.14);
+  modelMatrix.rotate(-cAngle2, 1, 0, 1); // Rotate around the x & z-axis
 
-  var third = 0.15;
-
-  modelMatrix.translate(0.35, 0.3, 0.43);
-  //modelMatrix.translate(0.5, 0.0, 0.0); 
-  modelMatrix.rotate(cAngle2, 1, 0, 1);
-
-  drawMess(gl, third);
+  drawMess(gl, base);
+ // END of Rocking 4th dodecahedron:---------------------------- 
   modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 5th object- a heart:-----------------------------------
+  // small one heart -- next to the 2nd dodecahedron
+  modelMatrix.translate(0.48, 0.1, 0.2);
+  modelMatrix.rotate(-55, 0, 1, 1); // Rotate -55 around the y & z-axis
+  modelMatrix.scale(0.7, 0.7, 0.7); // SHRINK axes by 70% for the heart,
+
+  drawheart(gl,base);
+ // END of Rocking the heart:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 5th dodecahedron:-----------------------------------
+  // larger one -- next to the 4th dodecahedron
+  modelMatrix.translate(0.06, -0.6, 0.24); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
+
+  drawMess(gl, two);
+ // END of Rocking 5th dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 6th dodecahedron:-----------------------------------
+  // larger one -- next to the 5th dodecahedron
+  modelMatrix.translate(0.37, -0.5, 0.24);
+  modelMatrix.rotate(-cAngle2, 1, 0, 0);// Rotate around the x-axis
+
+  drawMess(gl, base);
+// END of Rocking 6th dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking the last dodecahedron:-----------------------------------
+  // larger one -- next to the 6th dodecahedron and the heart
+  modelMatrix.translate(0.5, -0.2, 0.24); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
+
+  drawMess(gl, two+0.03);
+// END of Rocking the last dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+
 
 //draw heart
+
+  // Let key board clicks move the drawing axes before we do any other drawing:
   modelMatrix.setTranslate(heartX, heartY, 0.0);
+  // Let GUI controls change the drawing heart size before we do any other drawing:
   modelMatrix.scale(heartSize,heartSize,heartSize); 
 
   pushMatrix(modelMatrix); 
+  // Rocking 1st hollow BASE heart:-----------------------------------
   var size = 0.15;
   modelMatrix.translate(-0.5, 0.0, 0.0); 
   modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
 
   drawheart(gl,size);
-  
-  modelMatrix = popMatrix();
-  pushMatrix(modelMatrix); 
+  // END of Rocking 1st hollow BASE heart:---------------------------- 
 
+   pushMatrix(modelMatrix); 
+  // Rocking 2nd hollow heart:-----------------------------------
+  // on the bottom of the 1st hollow heart
+   modelMatrix.translate(0.0, -0.35, 0.0); 
+
+   drawheart(gl,size);
+  // END of Rocking 2nd hollow heart:---------------------------- 
+   modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+  // Rocking hollow LINE heart:-----------------------------------
+  // on the top of BASE heart
    var sizeThird = 0.14;
 
-   modelMatrix.translate(-0.5, 0.1, -0.3); 
-   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate around the x & y-axis
-   modelMatrix.scale(0.6,0.6,0.6);   // Rotate around the x & y-axis
+   modelMatrix.translate(0.0, 0.1, -0.0); 
+   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
+   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
    modelMatrix.translate(0.0, 0.23, 0.0); 
 
    drawheart(gl,sizeThird);
-
+  // END of Rocking hollow LINE heart:---------------------------- 
+   modelMatrix = popMatrix();
+   
    modelMatrix = popMatrix();
 
 
    pushMatrix(modelMatrix); 
-
-   modelMatrix.translate(-0.5, -0.35, 0.0); 
-   modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
-
-   drawheart(gl,size);
-
-   modelMatrix = popMatrix();
-
-
-   pushMatrix(modelMatrix); 
-
+// Rocking the heart-shaped dish:-----------------------------------
+  //on the bottom of to the 2nd hollow heart
    var sizeSecond = 0.3;
 
-   modelMatrix.translate(-0.5, -0.45, 0.0); 
-   modelMatrix.rotate(-300, 1, 0, 0); // Rotate around the x & y-axis
-   modelMatrix.rotate(currentAngle, 0, 0, 1); // Rotate around the x & y-axis
+   modelMatrix.translate(-0.5, -0.48, 0.0); 
+   modelMatrix.rotate(-300, 1, 0, 0); // Rotate -300 around the x-axis
+   modelMatrix.rotate(currentAngle, 0, 0, -1); // Rotate around the z-axis
 
    drawheart(gl,sizeSecond);
-
+  // END of Rocking the heart-shaped dish:---------------------------- 
    modelMatrix = popMatrix();
 
 }
 
-//draw single mess
+//draw single dodecahedron
 function drawMess(gl, size) {
   
   pushMatrix(modelMatrix);
@@ -332,7 +382,7 @@ function drawMess(gl, size) {
   // Pass the model matrix to u_ModelMatrix
   updateModelMatrix(modelMatrix);
 
-  // Draw the mess
+  // Draw the dodecahedron
   gl.drawArrays(gl.TRIANGLE_STRIP,0,180);
   
   modelMatrix = popMatrix(); // Retrieve the model matrix 
@@ -344,8 +394,12 @@ function drawheart(gl, size){
   pushMatrix(modelMatrix);
   
   modelMatrix.scale(size,size,size); 
-
+// Calculate the model matrix
+  // Pass the model matrix to u_ModelMatrix
   updateModelMatrix(modelMatrix);
+  // when size equals to 0.15, draw a hollow heart
+  // when size equals to 0.3, draw a heart-shaped dish
+  // else draw a line-shaped heart
   if(size === 0.15)
     gl.drawArrays(gl.LINE_STRIP,180,350*2);
   else if(size === 0.3)
@@ -366,11 +420,11 @@ function animate() {
   heartSize = heartSize + (heartSizeStep * elapsed) / 1000.0;
   if(heartSize < 0.5){
     heartSize=0.5;
-    heartSizeStep = heartSizeStep < 0 ? -heartSizeStep: heartSizeStep;
+    heartSizeStep = heartSizeStep < 0 ? -heartSizeStep: heartSizeStep; // go LARGER
   }
   if(heartSize > 1.0){
     heartSize=1.0;
-    heartSizeStep = heartSizeStep > 0 ? -heartSizeStep: heartSizeStep;
+    heartSizeStep = heartSizeStep > 0 ? -heartSizeStep: heartSizeStep; // go SMALLER
   }
 
   // Update the current rotation angle (adjusted by the elapsed time)
@@ -399,7 +453,7 @@ function updateColorControl(){
   gl.uniform4f(u_RandomColor, Math.abs(currentColor/300 -0.2), Math.abs(currentColor/300 -0.5), Math.abs(currentColor/300 -0.6), 0.7); 
 
 }
-
+// basic colors
 var color = [
     1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 0.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
     1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 0.0, 1.0,  0.6, 0.8, 1.0, 1.0,  
@@ -420,14 +474,13 @@ function makeHeart(){
     data = data.concat([x/10,y/10,-0.0,1.0]);
   }
 
-  var colors = [];
-  for(var i = 0; i< 48; i++){
-    colors.push.apply(colors, color);
-  }
+  // var colors = [];
+  // for(var i = 0; i< 48; i++){
+  //   colors = colors.concat(color);
+  // }
 
   appendPositions(data);
   
-  //appendColors(colors);
 
 }
 
@@ -484,9 +537,9 @@ function makeMess(){
   }
 
   var verticesColors = [];
-  
+  // generate colors
   for(var i = 0; i< 48; i++){
-    verticesColors.push.apply(verticesColors, color);
+    verticesColors = verticesColors.concat(color);
   }
   
 
