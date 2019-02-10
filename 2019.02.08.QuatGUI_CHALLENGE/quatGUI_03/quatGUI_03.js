@@ -35,6 +35,8 @@ var g_myMatrix = new Matrix4();
                   // 4x4 matrix we send to the GPU where it transforms vertices
 var g_tmpMatrix = new Matrix4();  // used in drawAll() fcn for mouse-drag..
 
+var g_mouseSpin = new Matrix4();
+
 var g_digits = 5; // # of digits printed on-screen (e.g. x.toFixed(g_digits);
 
 //------------For mouse click-and-drag: -------------------------------
@@ -293,18 +295,19 @@ function drawAll()
 	      //  One way to solve the problem is to use use a temporary Matrix4:
 	      // (you'll need to declare it).
 	      
-  g_tmpMatrix.set(g_myMatrix);  // SAVE [OLD] matrix(e.g. current drawing axes)
+  //g_tmpMatrix.set(g_myMatrix);  // SAVE [OLD] matrix(e.g. current drawing axes)
 //                                // REPLACE g_myMatrix contents with [ROT]:
-	var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
-	g_myMatrix.setRotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
-	g_myMatrix.multiply(g_tmpMatrix); // Multiply: [NEW] = [ROT][OLD] 
+	//var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+	//g_myMatrix.setRotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+	//g_myMatrix.multiply(g_tmpMatrix); // Multiply: [NEW] = [ROT][OLD] 
 
 //*/
 	//-------------------------------
 	// Attempt 4: accumulating all those rotation matrices is risky -- you're
 	// also accumulating numerical errors that aren't rotations!
 	// Quaternions? What will work better?
-
+  if(!g_isDrag) buttonClearDragTot();
+  g_myMatrix.multiply(g_mouseSpin);
 	//-------------------------------
   drawAxes();                       // draw our small, mouse-spun wedge & axes.
   drawHalfWedge();     
@@ -545,7 +548,7 @@ function myMouseMove(ev) {
 // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
 //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
 
-	if(g_isDrag==false) return;			// IGNORE all mouse-moves except 'dragging'
+	if(g_isDrag==false) {return;}			// IGNORE all mouse-moves except 'dragging'
 
 	// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
   var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
@@ -565,6 +568,12 @@ function myMouseMove(ev) {
 	g_yMdragTot += (y - g_yMclik);
 	g_xMclik = x;									      // Make next drag-measurement from here.
 	g_yMclik = y;
+
+  
+  if(g_isDrag) {
+    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+    g_mouseSpin.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0)
+  } 
 // (? why no 'document.getElementById() call here, as we did for myMouseDown()
 // and myMouseUp()? Because the webpage doesn't get updated when we move the 
 // mouse. Put the web-page updating command in the 'tick()' function instead)

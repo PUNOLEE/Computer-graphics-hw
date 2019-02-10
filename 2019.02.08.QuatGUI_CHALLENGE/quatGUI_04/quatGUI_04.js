@@ -230,8 +230,7 @@ function drawAll()
   pushMatrix(g_myMatrix);           // SAVE current drawing axes:
   g_myMatrix.translate(0.4,0.4,0.0);  // move to upper right, and
   g_myMatrix.scale(0.5, 0.5, 0.5);    // shrink drawing axes
-  quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
-  g_myMatrix.concat(quatMatrix); // apply that matrix.
+
               
   // Mouse-Dragging for Rotation:
 	//-----------------------------
@@ -310,7 +309,8 @@ function drawAll()
 	// Attempt 4: accumulating all those rotation matrices is risky -- you're
 	// also accumulating numerical errors that aren't rotations!
 	// Quaternions? What will work better?
-
+  quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
+  g_myMatrix.concat(quatMatrix); // apply that matrix.
 	//-------------------------------
   drawAxes();                       // draw our small, mouse-spun wedge & axes.
   drawHalfWedge();     
