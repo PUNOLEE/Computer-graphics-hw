@@ -306,8 +306,7 @@ function drawAll()
 	// Attempt 4: accumulating all those rotation matrices is risky -- you're
 	// also accumulating numerical errors that aren't rotations!
 	// Quaternions? What will work better?
-  if(!g_isDrag) buttonClearDragTot();
-  g_myMatrix.multiply(g_mouseSpin);
+   g_myMatrix.multiply(g_mouseSpin);
 	//-------------------------------
   drawAxes();                       // draw our small, mouse-spun wedge & axes.
   drawHalfWedge();     
@@ -569,11 +568,8 @@ function myMouseMove(ev) {
 	g_xMclik = x;									      // Make next drag-measurement from here.
 	g_yMclik = y;
 
-  
-  if(g_isDrag) {
-    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
-    g_mouseSpin.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0)
-  } 
+  dragRot();
+ 
 // (? why no 'document.getElementById() call here, as we did for myMouseDown()
 // and myMouseUp()? Because the webpage doesn't get updated when we move the 
 // mouse. Put the web-page updating command in the 'tick()' function instead)
@@ -603,12 +599,23 @@ function myMouseUp(ev) {
 	// accumulate any final bit of mouse-dragging we did:
 	g_xMdragTot += (x - g_xMclik);
 	g_yMdragTot += (y - g_yMclik);
+
+  dragRot();
+
 	console.log('myMouseUp: xMdragTot,yMdragTot =',g_xMdragTot.toFixed(g_digits),',\t', g_yMdragTot.toFixed(g_digits));
 	// Put it on our webpage too...
 	document.getElementById('MouseAtResult').innerHTML = 
 	'myMouseUp(       ) at CVV coords x,y = ' +x.toFixed(g_digits)+
 	                                      ', '+y.toFixed(g_digits);
 };
+
+function dragRot(){
+  g_tmpMatrix.set(g_mouseSpin);  // SAVE [OLD] matrix(e.g. current drawing axes)
+//                                // REPLACE g_mouseSpin contents with [ROT]:
+  var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+  g_mouseSpin.setRotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+  g_tmpMatrix.multiply(g_mouseSpin);
+}
 
 function myMouseClick(ev) {
 //=============================================================================
