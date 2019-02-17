@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project B</title>
+  </head>
+
+  <body style="display: flex;flex-direction: column;background-color:#404059 ">
+    <canvas id="webgl" width="600" height="600" style="margin:0 auto">
+      <! Canvas size in pixels -->
+      Please use a browser that supports HTML-5 "canvas"
+    </canvas>
+
+    <div style="text-align: center; color:white">
+      <br>
+      Open Console, please: (right-click-->'Inspect Element'-->'Console' tab
+      <br>
+      Use DAT GUI controls!
+      <br>
+      <BR />
+      Try drag the bracelet <BR />
+      Hit <- ->
+      to change the bracelet's rotation angle <BR /> Hit ^ v to change
+      the bracelet's Y position<BR /> Hit A D to change heart-shaped dish's Y position<BR />
+    </div>
+
+    <! Load webGL-supplied libraries  >
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <! Load our textbook-supplied libraries>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix-quat03.js"></script>
+
+    <! Load OUR 3D graphics drawing program: lib1 by Vincent Bommier, 2018>
+    <script src="lib1.js"></script>
+    <! to simplify drawing colorful triangles in 3D>
+
+    <script src="LiLingyun_ProjB.js"></script>
+    <! OUR program >
+    <script type="text/javascript" src="../lib/dat.gui.min.js"></script>
+    <!DAT.GUI>
+
+  </body>
+</html>
