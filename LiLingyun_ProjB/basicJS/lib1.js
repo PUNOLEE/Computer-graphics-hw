@@ -2,10 +2,10 @@ var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'attribute vec4 a_Color;\n' +
   'attribute float a_PointSize;\n' +
-  'uniform mat4 u_ModelMatrix;\n' +
+  'uniform mat4 u_MvpMatrix;\n' +
   'varying vec4 v_Color;\n' +
   'void main() {\n' +
-  '  gl_Position = u_ModelMatrix * a_Position;\n' +
+  '  gl_Position = u_MvpMatrix * a_Position;\n' +
   '  v_Color = a_Color;\n' +
   '  gl_PointSize = a_PointSize;\n' +
   '}\n';
@@ -35,6 +35,7 @@ var FSIZE = positions.BYTES_PER_ELEMENT;
 var ipos = icolors = ipointSizes = 0;
 var modelMatrix = new Matrix4();
 var u_ModelMatrix;
+var u_MvpMatrix;
 var u_RandomColor;
 
 function init(){
@@ -71,13 +72,12 @@ function init(){
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   // Clear the color buffer and the depth buffer
 
-  // Get the storage location for the u_ModelMatrix uniform:
-  u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
-  if (!u_ModelMatrix) {
-    console.log('lib1.js: init failed to get the storage location of u_ModelMatrix');
+  // Get the storage location of u_MvpMatrix
+  u_MvpMatrix = gl.getUniformLocation(gl.program, 'u_MvpMatrix');
+  if (!u_MvpMatrix) { 
+    console.log('Failed to get the storage location of u_MvpMatrix or u_ProjMatrix');
     return;
   }
-  
 
   return gl;
 }
@@ -187,6 +187,14 @@ function Float32Edit(base,edit,startIdx){
 
 function updateModelMatrix(matrix){
   gl.uniformMatrix4fv(u_ModelMatrix, false, matrix.elements);
+}
+
+function updateMvpMatrix(matrix){
+  gl.uniformMatrix4fv(u_MvpMatrix, false, matrix.elements);
+}
+
+function updateProjMatrix(matrix){
+  gl.uniformMatrix4fv(u_ProjMatrix, false, matrix.elements);
 }
 
 //Concatenate all attributes into a single array

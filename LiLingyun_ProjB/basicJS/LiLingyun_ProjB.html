@@ -5,8 +5,8 @@
     <title>Project B</title>
   </head>
 
-  <body style="display: flex;flex-direction: column;background-color:#404059 ">
-    <canvas id="webgl" width="600" height="600" style="margin:0 auto">
+  <body onresize="resize()" style="width:100%;height:100%;background-color:#404059 ">
+    <canvas id="webgl" height="600">
       <! Canvas size in pixels -->
       Please use a browser that supports HTML-5 "canvas"
     </canvas>
@@ -15,9 +15,10 @@
       <br>
       Open Console, please: (right-click-->'Inspect Element'-->'Console' tab
       <br>
-      Use DAT GUI controls!
+      Use DAT GUI controls! 
       <br>
-      <BR />
+      Current Quaternion: w + xi + yj + zk where (i,j,k) are 3-way imaginary numbers:
+      <div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. <br> length=1. </div>
       Try drag the bracelet <BR />
       Hit <- ->
       to change the bracelet's rotation angle <BR /> Hit ^ v to change

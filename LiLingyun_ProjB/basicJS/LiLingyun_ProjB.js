@@ -20,12 +20,24 @@ var heartSizeStep = 0.1;
 var text;
 var floatsPerVertex = 4;
 
+var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
+var g_LookAtX = -1.0, g_LookAtY = -2.0, g_LookAtZ = -0.5;
+var projMatrix = new Matrix4();
+var viewMatrix = new Matrix4();
+var mvpMatrix = new Matrix4();
+
+var quatMatrix = new Matrix4();   // rotation matrix, made from latest qTot
+var qNew = new Quaternion(0,0,0,1); // most-recent mouse drag's rotation
+var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
+
 //DAT.GUI
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
   this.heartSize = 1.0;
 };
+
+
 
 window.onload = function() {
   // load controls and canvas
@@ -39,9 +51,11 @@ window.onload = function() {
 
 };
 
-function main() {
-  var canvas = document.getElementById("webgl");
 
+function main() {
+  canvas = document.getElementById("webgl");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight * 0.8;
   // Get the rendering context for WebGL
   gl = init();
 
@@ -54,7 +68,11 @@ function main() {
    makeMess();
    makeHeart();
    makeGroundGrid();
-   
+   append_Axes();
+   append_Wedge();
+   makeTorus();
+   makeCube();
+
   // onkeydown listener
   window.addEventListener("keydown", (ev)=>keydown(ev, gl), false);
 
@@ -78,7 +96,7 @@ function main() {
   var tick = function() {
     animate(); // Update the rotation angle
 
-    draw(gl); // draw objects
+    drawView(gl); // draw objects
 
     requestAnimationFrame(tick, canvas); // Request that the browser ?calls tick
   };
@@ -151,6 +169,8 @@ function myMouseMove(ev, canvas) {
   // find how far we dragged the mouse:
   myX += (x - xMouseclik);      // Accumulate change-in-mouse-position,&
   myY += (y - yMouseclik);
+  dragQuat(x - xMouseclik, y - yMouseclik);
+
   xMouseclik = x;                       // Make next drag-measurement from here.
   yMouseclik = y;
 };
@@ -179,8 +199,57 @@ function myMouseUp(ev,canvas) {
   // accumulate any final bit of mouse-dragging we did:
   myX += (x - xMouseclik);
   myY += (y - yMouseclik);
+  dragQuat(x - xMouseclik, y - yMouseclik);
+
   console.log('myMouseUp: xMdragTot,yMdragTot =',myX,',\t', myY);
 };
+
+
+function dragQuat(xdrag, ydrag) {
+  //==============================================================================
+  // Called when user drags mouse by 'xdrag,ydrag' as measured in CVV coords.
+  // We find a rotation axis perpendicular to the drag direction, and convert the 
+  // drag distance to an angular rotation amount, and use both to set the value of 
+  // the quaternion qNew.  We then combine this new rotation with the current 
+  // rotation stored in quaternion 'qTot' by quaternion multiply.  Note the 
+  // 'draw()' function converts this current 'qTot' quaternion to a rotation 
+  // matrix for drawing. 
+    var res = 5;
+    var qTmp = new Quaternion(0,0,0,1);
+    
+    var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
+    // console.log('xdrag,ydrag=',xdrag.toFixed(5),ydrag.toFixed(5),'dist=',dist.toFixed(5));
+    qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
+    // (why add tiny 0.0001? To ensure we never have a zero-length rotation axis)
+                // why axis (x,y,z) = (-yMdrag,+xMdrag,0)? 
+                // -- to rotate around +x axis, drag mouse in -y direction.
+                // -- to rotate around +y axis, drag mouse in +x direction.
+                
+    qTmp.multiply(qNew,qTot);     // apply new rotation to current rotation. 
+    //--------------------------
+    // IMPORTANT! Why qNew*qTot instead of qTot*qNew? (Try it!)
+    // ANSWER: Because 'duality' governs ALL transformations, not just matrices. 
+    // If we multiplied in (qTot*qNew) order, we would rotate the drawing axes
+    // first by qTot, and then by qNew--we would apply mouse-dragging rotations
+    // to already-rotated drawing axes.  Instead, we wish to apply the mouse-drag
+    // rotations FIRST, before we apply rotations from all the previous dragging.
+    //------------------------
+    // IMPORTANT!  Both qTot and qNew are unit-length quaternions, but we store 
+    // them with finite precision. While the product of two (EXACTLY) unit-length
+    // quaternions will always be another unit-length quaternion, the qTmp length
+    // may drift away from 1.0 if we repeat this quaternion multiply many times.
+    // A non-unit-length quaternion won't work with our quaternion-to-matrix fcn.
+    // Matrix4.prototype.setFromQuat().
+  //  qTmp.normalize();           // normalize to ensure we stay at length==1.0.
+    qTot.copy(qTmp);
+    // show the new quaternion qTot on our webpage in the <div> element 'QuatValue'
+    document.getElementById('QuatValue').innerHTML= 
+                               '\t X=' +qTot.x.toFixed(res)+
+                              'i\t Y=' +qTot.y.toFixed(res)+
+                              'j\t Z=' +qTot.z.toFixed(res)+
+                              'k\t W=' +qTot.w.toFixed(res)+
+                              '<br>length='+qTot.length().toFixed(res);
+  };
 
 
 function keydown(ev, gl) {// Called when user hits any key button;
@@ -219,161 +288,124 @@ function keydown(ev, gl) {// Called when user hits any key button;
       return; // Skip drawing at no effective action
   }
   // Draw all
-  draw(gl);
+  drawView(gl);
 }
+function drawView(gl){
+  gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
+  gl.viewport(0, 0, canvas.width / 2, canvas.height);
+  viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
+    g_LookAtX, g_LookAtY, g_LookAtZ, //-1.0, -2.0, -0.5,      // look-at point 
+     0.0,  0.0,  1.0);     // 'up' vector
+  projMatrix.setPerspective(35, (0.5 * canvas.width) / canvas.height, 1, 100);
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  updateMvpMatrix(mvpMatrix);
 
+  // modelMatrix.setIdentity();    // DEFINE 'world-space' coords.
+
+  draw(gl);
+
+  gl.viewport(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+  projMatrix.setOrtho(-0.5*canvas.width/500, 0.5*canvas.width/500,          // left,right;
+    -canvas.height/500, canvas.height/500,          // bottom, top;
+    1, 100);       // near, far; (always >=0)
+  // projMatrix.setOrtho(-1, 1, // left,right;
+  //   -1, 1, // bottom, top;
+  //   1, 100); // near, far; (always >=0)
+  // viewMatrix.setLookAt(0, 0, 5, // eye position
+  //   1, 1, -2, // look-at point
+  //   0, 0, 1);
+  viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
+    g_LookAtX, g_LookAtY, g_LookAtZ, //-1.0, -2.0, -0.5,      // look-at point 
+      0.0,  0.0,  1.0);     // 'up' vector
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  updateMvpMatrix(mvpMatrix);
+  draw(gl);
+
+}
 function draw(gl) {
   // Draw a new on-screen image.
 
   // Be sure to clear the screen before re-drawing ...
-  gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
-
-  modelMatrix.setIdentity();    // DEFINE 'world-space' coords.
-
-  modelMatrix.perspective(42.0,   // FOVY: top-to-bottom vertical image angle, in degrees
-                           1.0,   // Image Aspect Ratio: camera lens width/height
-                           1.0,   // camera z-near distance (always positive; frustum begins at z = -znear)
-                        1000.0);  // camera z-far distance (always positive; frustum ends at z = -zfar)
-
-  modelMatrix.lookAt( 5.0,  5.0,  3.0,      // center of projection
-                     -1.0, -2.0, -0.5,      // look-at point 
-                      0.0,  0.0,  1.0);     // 'up' vector
-
+  modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   drawGround(gl);
+  drawAxes(gl);
   modelMatrix = popMatrix(); 
   pushMatrix(modelMatrix); 
-  // Let mouse-drag move the drawing axes before we do any other drawing:
-  //modelMatrix.setTranslate(myX, myY, 0.0);
-
-  // spinning BASE dodecahedron;
-  // small ones
-  var base = 0.15;
-  modelMatrix.translate(0.42, 0.4, 0.0); 
-
-  modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+  // draw tetrahedron 
+  modelMatrix.translate(-1,-0.4, 0.0); 
+  drawAxes(gl);
+  modelMatrix.scale(0.4,0.4,0.4);
+  modelMatrix.rotate(-currentAngle, 0, 0, 1);
+  drawFullWedge(gl);
+  modelMatrix = popMatrix();
+  pushMatrix(modelMatrix);
+  modelMatrix.setTranslate(-0.4, -1, 0.0);
+  modelMatrix.scale(1,1,-1);	
+  modelMatrix.scale(0.3, 0.3, 0.3);
+  modelMatrix.rotate(currentAngle, 0, 1, 1);
+  drawToru(gl);
+  modelMatrix = popMatrix();
+  pushMatrix(modelMatrix);
+  modelMatrix.setTranslate(1.5, 1.5, 0.0);
+  modelMatrix.scale(0.3, 0.3, 0.3);
+  modelMatrix.rotate(currentAngle, 0, 1, 1);
+  drawCube(gl);
+  modelMatrix = popMatrix();
+  pushMatrix(modelMatrix);
+  // spinning  dodecahedron;
+  modelMatrix.setTranslate(0.42, 0.4, 0.0); 
   
-  drawMess(gl, base);
+  modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+    // Let mouse-drag move the drawing axes before we do any other drawing:
+  quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
+  modelMatrix.concat(quatMatrix); // apply that matrix.
+  drawAxes(gl);
+  modelMatrix.scale(0.5,0.5,0.5);
+  drawMess(gl);
 
   modelMatrix = popMatrix(); 
 
   pushMatrix(modelMatrix); 
-  // Rocking 2nd dodecahedron:-----------------------------------
-  // larger one -- top of the base dodecahedron
-  var two = 0.2;
-
-  modelMatrix.translate(0.2, 0.18, 0.14); // move drawing axes to base dodecahedron's 
-                         // point: use this as the base dodecahedron's 'hinge point'
-                         // and make 'rocking' drawing axes pivot around it.
-  modelMatrix.rotate(90-currentAngle, 1, 1, 0); // 'rock' the drawing axes,
-
-  drawMess(gl, two);
- // END of Rocking 2nd dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking 3rd dodecahedron:-----------------------------------
-  // larger one -- bottom of the base dodecahedron
-  modelMatrix.translate(-0.16, -0.18, 0.14); 
-  modelMatrix.rotate(150.0 + 70-currentAngle, 1, 1, 0); // Rotate around the x & y-axis
-
-  drawMess(gl, two);
- // END of Rocking 3rd dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking 4th dodecahedron:-----------------------------------
-  // small one -- next to the 3rd dodecahedron
-  modelMatrix.translate(-0.2, -0.48, 0.14);
-  modelMatrix.rotate(-cAngle2, 1, 0, 1); // Rotate around the x & z-axis
-
-  drawMess(gl, base);
- // END of Rocking 4th dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking 5th object- a heart:-----------------------------------
-  // small one heart -- next to the 2nd dodecahedron
-  modelMatrix.translate(0.48, 0.1, 0.2);
-  modelMatrix.rotate(-55, 0, 1, 1); // Rotate -55 around the y & z-axis
-  modelMatrix.scale(0.7, 0.7, 0.7); // SHRINK axes by 70% for the heart,
-
-  drawheart(gl,base);
- // END of Rocking the heart:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking 5th dodecahedron:-----------------------------------
-  // larger one -- next to the 4th dodecahedron
-  modelMatrix.translate(0.06, -0.6, 0.24); 
-  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
-
-  drawMess(gl, two);
- // END of Rocking 5th dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking 6th dodecahedron:-----------------------------------
-  // larger one -- next to the 5th dodecahedron
-  modelMatrix.translate(0.37, -0.5, 0.24);
-  modelMatrix.rotate(-cAngle2, 1, 0, 0);// Rotate around the x-axis
-
-  drawMess(gl, base);
-// END of Rocking 6th dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-  pushMatrix(modelMatrix); 
-// Rocking the last dodecahedron:-----------------------------------
-  // larger one -- next to the 6th dodecahedron and the heart
-  modelMatrix.translate(0.5, -0.2, 0.24); 
-  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
-
-  drawMess(gl, two+0.03);
-// END of Rocking the last dodecahedron:---------------------------- 
-  modelMatrix = popMatrix();
-
-
-
 //draw heart
 
   // Let key board clicks move the drawing axes before we do any other drawing:
-  modelMatrix.setTranslate(-0.2, -0.2, 0.0);
+  modelMatrix.setTranslate(1.5, -0.2, 0.0);
   // Let GUI controls change the drawing heart size before we do any other drawing:
-  modelMatrix.scale(0.5,0.5,0.5); 
+  //modelMatrix.scale(0.5,0.5,0.5); 
 
-  pushMatrix(modelMatrix); 
-  // Rocking 1st hollow BASE heart:-----------------------------------
-  var size = 0.15;
-  modelMatrix.translate(-0.5, 0.0, 0.0); 
-  modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+  // pushMatrix(modelMatrix); 
+  // // Rocking 1st hollow BASE heart:-----------------------------------
+  // var size = 0.15;
+  // modelMatrix.translate(-0.5, 0.0, 0.0); 
+  // modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+  // drawheart(gl,size);
+  // // END of Rocking 1st hollow BASE heart:---------------------------- 
 
-  drawheart(gl,size);
-  // END of Rocking 1st hollow BASE heart:---------------------------- 
+  //  pushMatrix(modelMatrix); 
+  // // Rocking 2nd hollow heart:-----------------------------------
+  // // on the bottom of the 1st hollow heart
+  //  modelMatrix.translate(0.0, -0.35, 0.0); 
+  //  //drawAxes(gl);
+  //  drawheart(gl,size);
+  // // END of Rocking 2nd hollow heart:---------------------------- 
+  //  modelMatrix = popMatrix();
 
-   pushMatrix(modelMatrix); 
-  // Rocking 2nd hollow heart:-----------------------------------
-  // on the bottom of the 1st hollow heart
-   modelMatrix.translate(0.0, -0.35, 0.0); 
+  // pushMatrix(modelMatrix); 
+  // // Rocking hollow LINE heart:-----------------------------------
+  // // on the top of BASE heart
+  //  var sizeThird = 0.14;
 
-   drawheart(gl,size);
-  // END of Rocking 2nd hollow heart:---------------------------- 
-   modelMatrix = popMatrix();
+  //  modelMatrix.translate(0.0, 0.1, 0.0); 
+  //  modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
+  //  modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
+  //  modelMatrix.translate(0.0, 0.23, 0.0); 
 
-  pushMatrix(modelMatrix); 
-  // Rocking hollow LINE heart:-----------------------------------
-  // on the top of BASE heart
-   var sizeThird = 0.14;
-
-   modelMatrix.translate(0.0, 0.1, -0.0); 
-   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
-   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-   modelMatrix.translate(0.0, 0.23, 0.0); 
-
-   drawheart(gl,sizeThird);
-  // END of Rocking hollow LINE heart:---------------------------- 
-   modelMatrix = popMatrix();
+  //  drawheart(gl,sizeThird);
+  // // END of Rocking hollow LINE heart:---------------------------- 
+  //  modelMatrix = popMatrix();
    
-   modelMatrix = popMatrix();
+  //  modelMatrix = popMatrix();
 
 
    pushMatrix(modelMatrix); 
@@ -381,27 +413,58 @@ function draw(gl) {
   //on the bottom of to the 2nd hollow heart
    var sizeSecond = 0.3;
 
-   modelMatrix.translate(-0.5, -0.48, 0.0); 
-   modelMatrix.rotate(-300, 1, 0, 0); // Rotate -300 around the x-axis
+   modelMatrix.translate(-0.5, -0.48, 0.2); 
+   modelMatrix.rotate(-180, 1, 0, 0); // Rotate -300 around the x-axis
    modelMatrix.rotate(currentAngle, 0, 0, -1); // Rotate around the z-axis
-
+   
    drawheart(gl,sizeSecond);
   // END of Rocking the heart-shaped dish:---------------------------- 
-   modelMatrix = popMatrix();
+  // Rocking 1st hollow heart:-----------------------------------
+  var size = 0.15;
+  modelMatrix.rotate(90,0,1,0)
+  modelMatrix.rotate(-90,0,0,1)
+  modelMatrix.translate(0.0,0.18,0.0)
+  modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+  drawheart(gl,size);
+  // END of Rocking 1st hollow heart:---------------------------- 
+  modelMatrix.translate(0.0, 0.35, 0.0); 
+   //drawAxes(gl);
+   drawheart(gl,size);
+  // END of Rocking 2nd  heart:---------------------------- 
+  // Rocking 1st hollow LINE heart:-----------------------------------
+  // on the top of hollow heart
+   var sizeThird = 0.14;
 
-  
+   modelMatrix.translate(0.0, 0.1, 0.0); 
+   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
+   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
+   modelMatrix.translate(0.0, 0.23, 0.0); 
+
+   drawheart(gl,sizeThird);
+  // END of Rocking 1st hollow LINE heart:---------------------------- 
+  // Rocking 2nd hollow LINE heart:-----------------------------------
+  // on the top of hollow heart
+  var sizeThird = 0.14;
+
+  modelMatrix.translate(0.0, 0.1, 0.0); 
+  modelMatrix.rotate(300+cAngle2, 1, 0, 0); // Rotate negatively around the x-axis
+  modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
+  modelMatrix.translate(0.0, 0.23, 0.0); 
+
+  drawheart(gl,sizeThird);
+ // END of Rocking 2nd hollow LINE heart:---------------------------- 
+   modelMatrix = popMatrix();
 
 }
 
 //draw single dodecahedron
-function drawMess(gl, size) {
+function drawMess(gl) {
   
   pushMatrix(modelMatrix);
-
-  modelMatrix.scale(size, size, size);
-  // Calculate the model matrix
-  // Pass the model matrix to u_ModelMatrix
-  updateModelMatrix(modelMatrix);
+  // Calculate the model view projection matrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
 
   // Draw the dodecahedron
   gl.drawArrays(gl.TRIANGLE_STRIP,0,180);
@@ -410,23 +473,63 @@ function drawMess(gl, size) {
 
 }
 
+function drawAxes(gl) {
+  //-----------------------------------------------------------------------------
+  // Calculate the model view projection matrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
+  gl.drawArrays(gl.LINES,1300,6);   // 2nd set of 6 verts in GPU.
+}
+
+function drawFullWedge(gl) {
+  //-----------------------------------------------------------------------------
+  // Draw all 4 triangles of our tetrahedron
+  // base is in z=0 plane centered at origin; apex on z axis.
+    pushMatrix(modelMatrix);  // SAVE the given myMatrix contents, then:
+    mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+    updateMvpMatrix(mvpMatrix);
+    gl.drawArrays(gl.TRIANGLE_STRIP,1306,6); // DRAW 4 triangles.
+    modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
+}
+
+function drawToru(gl){
+  pushMatrix(modelMatrix);
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
+  gl.drawArrays(gl.TRIANGLE_STRIP,1312,600); // DRAW 4 triangles.
+  modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
+}
+
+function drawCube(gl){
+  pushMatrix(modelMatrix);
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
+  gl.drawArrays(gl.TRIANGLES,1912,36); // DRAW 4 triangles.
+  modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
+}
+
 function drawheart(gl, size){
 
   pushMatrix(modelMatrix);
   
   modelMatrix.scale(size,size,size); 
-// Calculate the model matrix
-  // Pass the model matrix to u_ModelMatrix
-  updateModelMatrix(modelMatrix);
+  // Calculate the model view projection matrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
   // when size equals to 0.15, draw a hollow heart
   // when size equals to 0.3, draw a heart-shaped dish
   // else draw a line-shaped heart
   if(size === 0.15)
-    gl.drawArrays(gl.LINE_STRIP,180,350*2);
+    gl.drawArrays(gl.LINE_STRIP,180,720);
   else if(size === 0.3)
-    gl.drawArrays(gl.TRIANGLE_FAN,180,350*2);
+    gl.drawArrays(gl.TRIANGLE_FAN,180,720);
   else
-    gl.drawArrays(gl.LINES,180,350*2);
+    gl.drawArrays(gl.LINES,180,720);
   modelMatrix = popMatrix(); // Retrieve the model matrix
 }
 
@@ -439,11 +542,13 @@ function drawGround(gl){
   modelMatrix.scale(0.1, 0.1, 0.1);       // shrink by 10X:
 //  modelMatrix.rotate(-60.0, 1,0,0 );
   // Drawing:
-  // Pass our current matrix to the vertex shaders:
-  updateModelMatrix(modelMatrix);
+  // Calculate the model view projection matrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  updateMvpMatrix(mvpMatrix);
   // Draw just the ground-plane's vertices
   gl.drawArrays(gl.LINES,                 // use this drawing primitive, and
-                880, // start at this vertex number, and
+                900, // start at this vertex number, and
                 400); // draw this many vertices.
   
   modelMatrix = popMatrix();  // RESTORE 'world' drawing coords.
@@ -581,13 +686,21 @@ function makeMess(){
     verticesColors = verticesColors.concat(color);
   }
   var colr = [0.5, 1.0, 0.5, 1.0];
-  
+  // group vertices: 400
   for(var j=0; j< 400; j++){
     verticesColors = verticesColors.concat(colr);
   }
-   appendPositions(vertices);
+  // 6 vertices
+  var colrA = [1.0, 0.2, 0.2, 1.0,   // bright red
+    1.0, 0.2, 0.2, 1.0,
+    0.2, 1.0, 0.2, 1.0,   // bright green
+    0.2, 1.0, 0.2, 1.0,
+    0.2, 0.2, 1.0, 1.0,   // bright blue.
+    0.2, 0.2, 1.0, 1.0,];
+  verticesColors = verticesColors.concat(colrA);
+  appendPositions(vertices);
 
-   appendColors(verticesColors);
+  appendColors(verticesColors);
 }
 
 function makeGroundGrid() {
@@ -598,8 +711,6 @@ function makeGroundGrid() {
   var xcount = 100;     // # of lines to draw in x,y to make the grid.
   var ycount = 100;   
   var xymax = 50.0;     // grid size; extends to cover +/-xymax in x and y.
-  //var xColr = new Float32Array([1.0, 1.0, 0.3]);  // bright yellow
-  //var yColr = new Float32Array([0.5, 1.0, 0.5]);  // bright green.
   
   // Create an (global) array to hold this ground-plane's vertices:
   var gndVerts = [];
@@ -622,9 +733,6 @@ function makeGroundGrid() {
       gndVerts[j+2] = 0.0;                  // z
       gndVerts[j+3] = 1.0;                  // w.
     }
-    //gndVerts[j+4] = xColr[0];     // red
-    //gndVerts[j+5] = xColr[1];     // grn
-    //gndVerts[j+6] = xColr[2];     // blu
   }
   // Second, step thru y values as wqe make horizontal lines of constant-y:
   // (don't re-initialize j--we're adding more vertices to the array)
@@ -641,10 +749,238 @@ function makeGroundGrid() {
       gndVerts[j+2] = 0.0;                  // z
       gndVerts[j+3] = 1.0;                  // w.
     }
-    //gndVerts[j+4] = yColr[0];     // red
-    //gndVerts[j+5] = yColr[1];     // grn
-    //gndVerts[j+6] = yColr[2];     // blu
   }
 
   appendPositions(gndVerts);
+}
+
+function append_Axes() {
+  //-----------------------------------------------------------------------------
+  // Create & store 'Axes' 3D part that uses gl.LINES primitives to draw 
+  // the +x,+y,+z axes as unit-length red,green,blue lines outwards from origin,
+  // using the CURRENT DRAWING AXES (as defined my ModelMatrix on GPU).
+    appendPositions([0.0, 0.0, 0.0, 1.0,      // x axis
+                     1.0, 0.0, 0.0, 1.0,
+                     0.0, 0.0, 0.0, 1.0,      // y axis
+                     0.0, 1.0, 0.0, 1.0,
+                     0.0, 0.0, 0.0, 1.0,      // z axis
+                     0.0, 0.0, 1.0, 1.0, ]);
+}
+
+function append_Wedge() {
+  //------------------------------------------------------------------------------
+  // Create & store a 2-triangle wedge-like 3D part.
+  // (from old 5.04.ControlMulti starter code).
+    var c30 = Math.sqrt(0.75);					// == cos(30deg) == sqrt(3) / 2
+    var sq2	= Math.sqrt(2.0);						
+  
+  /*
+    // Coordinates(x,y,z,w) and colors (R,G,B,A) for a tetrahedron:
+    // Apex on +z axis; equilateral triangle base at z=0 centered at origin.
+    Nodes:
+       0.0,	 0.0, sq2, 1.0,		// n0 (apex, +z axis;  white)
+       c30, -0.5, 0.0, 1.0, 	// n1 (base: lower rt; blue)
+       0.0,  1.0, 0.0, 1.0,  	// n2 (base: +y axis;  red)
+      -c30, -0.5, 0.0, 1.0, 	// n3 (base:lower lft; grn)
+        // Face 0: (right side);  Node 0,1,2
+        // Face 1: (left side);   Node 0,2,3
+        // Face 2: (lower side);  Node 0,3,1    // Use these last 2 faces...
+        // Face 3: (base side);   Node 3,2,1.  
+  */
+    appendPositions([  0.0,  0.0, sq2, 1.0,  // node 0     // triangle-strip.  
+                      -c30, -0.5, 0.0, 1.0,  // node 3     // Draw 1st 4 verts only.
+                       c30, -0.5, 0.0, 1.0,  // node 1
+                       0.0,  1.0, 0.0, 1.0,  // node 2
+                       0.0,	 0.0, sq2, 1.0,  // node 0
+                      -c30, -0.5, 0.0, 1.0,  // node 3
+    ]);
+    appendColors([1.0, 0.4, 0.4, 1.0,  
+      1.0, 1.0, 0.0, 1.0,  
+      0.8, 0.5, 1.0, 1.0, 
+      1.0, 0.4, 1.0, 1.0,  
+      1.0, 1.0, 0.0, 1.0,  
+      0.6, 0.8, 1.0, 1.0, 
+                ]);
+  
+}
+
+function makeTorus() {
+  //==============================================================================
+  // 		Create a torus centered at the origin that circles the z axis.  
+  // Terminology: imagine a torus as a flexible, cylinder-shaped bar or rod bent 
+  // into a circle around the z-axis. The bent bar's centerline forms a circle
+  // entirely in the z=0 plane, centered at the origin, with radius 'rbend'.  The 
+  // bent-bar circle begins at (rbend,0,0), increases in +y direction to circle  
+  // around the z-axis in counter-clockwise (CCW) direction, consistent with our
+  // right-handed coordinate system.
+  // 		This bent bar forms a torus because the bar itself has a circular cross-
+  // section with radius 'rbar' and angle 'phi'. We measure phi in CCW direction 
+  // around the bar's centerline, circling right-handed along the direction 
+  // forward from the bar's start at theta=0 towards its end at theta=2PI.
+  // 		THUS theta=0, phi=0 selects the torus surface point (rbend+rbar,0,0);
+  // a slight increase in phi moves that point in -z direction and a slight
+  // increase in theta moves that point in the +y direction.  
+  // To construct the torus, begin with the circle at the start of the bar:
+  //					xc = rbend + rbar*cos(phi); 
+  //					yc = 0; 
+  //					zc = -rbar*sin(phi);			(note negative sin(); right-handed phi)
+  // and then rotate this circle around the z-axis by angle theta:
+  //					x = xc*cos(theta) - yc*sin(theta) 	
+  //					y = xc*sin(theta) + yc*cos(theta)
+  //					z = zc
+  // Simplify: yc==0, so
+  //					x = (rbend + rbar*cos(phi))*cos(theta)
+  //					y = (rbend + rbar*cos(phi))*sin(theta) 
+  //					z = -rbar*sin(phi)
+  // To construct a torus from a single triangle-strip, make a 'stepped spiral' 
+  // along the length of the bent bar; successive rings of constant-theta, using 
+  // the same design used for cylinder walls in 'makeCyl()' and for 'slices' in 
+  // makeSphere().  Unlike the cylinder and sphere, we have no 'special case' 
+  // for the first and last of these bar-encircling rings.
+  //
+  var rbend = 1.0;										// Radius of circle formed by torus' bent bar
+  var rbar = 0.5;											// radius of the bar we bent to form torus
+  var barSlices = 23;									// # of bar-segments in the torus: >=3 req'd;
+                                      // more segments for more-circular torus
+  var barSides = 13;										// # of sides of the bar (and thus the 
+                                      // number of vertices in its cross-section)
+                                      // >=3 req'd;
+                                      // more sides for more-circular cross-section
+  // for nice-looking torus with approx square facets, 
+  //			--choose odd or prime#  for barSides, and
+  //			--choose pdd or prime# for barSlices of approx. barSides *(rbend/rbar)
+  // EXAMPLE: rbend = 1, rbar = 0.5, barSlices =23, barSides = 11.
+  
+    // Create a (global) array to hold this torus's vertices:
+   var torVerts = [];
+  //	Each slice requires 2*barSides vertices, but 1st slice will skip its first 
+  // triangle and last slice will skip its last triangle. To 'close' the torus,
+  // repeat the first 2 vertices at the end of the triangle-strip.  Assume 7
+  
+  var phi=0, theta=0;										// begin torus at angles 0,0
+  var thetaStep = 2*Math.PI/barSlices;	// theta angle between each bar segment
+  var phiHalfStep = Math.PI/barSides;		// half-phi angle between each side of bar
+                                        // (WHY HALF? 2 vertices per step in phi)
+    // s counts slices of the bar; v counts vertices within one slice; j counts
+    // array elements (Float32) (vertices*#attribs/vertex) put in torVerts array.
+    for(s=0,j=0; s<barSlices; s++) {		// for each 'slice' or 'ring' of the torus:
+      for(v=0; v< 2*barSides; v++, j+=4) {		// for each vertex in this slice:
+        if(v%2==0)	{	// even #'d vertices at bottom of slice,
+          torVerts[j  ] = (rbend + rbar*Math.cos((v)*phiHalfStep)) * 
+                                               Math.cos((s)*thetaStep);
+                  //	x = (rbend + rbar*cos(phi)) * cos(theta)
+          torVerts[j+1] = (rbend + rbar*Math.cos((v)*phiHalfStep)) *
+                                               Math.sin((s)*thetaStep);
+                  //  y = (rbend + rbar*cos(phi)) * sin(theta) 
+          torVerts[j+2] = -rbar*Math.sin((v)*phiHalfStep);
+                  //  z = -rbar  *   sin(phi)
+          torVerts[j+3] = 1.0;		// w
+        }
+        else {				// odd #'d vertices at top of slice (s+1);
+                      // at same phi used at bottom of slice (v-1)
+          torVerts[j  ] = (rbend + rbar*Math.cos((v-1)*phiHalfStep)) * 
+                                               Math.cos((s+1)*thetaStep);
+                  //	x = (rbend + rbar*cos(phi)) * cos(theta)
+          torVerts[j+1] = (rbend + rbar*Math.cos((v-1)*phiHalfStep)) *
+                                               Math.sin((s+1)*thetaStep);
+                  //  y = (rbend + rbar*cos(phi)) * sin(theta) 
+          torVerts[j+2] = -rbar*Math.sin((v-1)*phiHalfStep);
+                  //  z = -rbar  *   sin(phi)
+          torVerts[j+3] = 1.0;		// w
+        }
+      }
+    }
+    // Repeat the 1st 2 vertices of the triangle strip to complete the torus:
+        torVerts[j  ] = rbend + rbar;	// copy vertex zero;
+                //	x = (rbend + rbar*cos(phi==0)) * cos(theta==0)
+        torVerts[j+1] = 0.0;
+                //  y = (rbend + rbar*cos(phi==0)) * sin(theta==0) 
+        torVerts[j+2] = 0.0;
+                //  z = -rbar  *   sin(phi==0)
+        torVerts[j+3] = 1.0;	
+        j+=4; // go to next vertex:
+        torVerts[j  ] = (rbend + rbar) * Math.cos(thetaStep);
+                //	x = (rbend + rbar*cos(phi==0)) * cos(theta==thetaStep)
+        torVerts[j+1] = (rbend + rbar) * Math.sin(thetaStep);
+                //  y = (rbend + rbar*cos(phi==0)) * sin(theta==thetaStep) 
+        torVerts[j+2] = 0.0;
+                //  z = -rbar  *   sin(phi==0)
+        torVerts[j+3] = 1.0;		// w
+        appendPositions(torVerts);
+
+        var torColors = [];
+        // generate colors for 600 vertices
+        for(var i = 0; i< 40; i++){
+          torColors = torColors.concat(color);
+        }
+        appendColors(torColors);
+
+}
+
+function makeCube(){
+  // 36 vertices
+  var cubeVert = [
+    // Front face
+    -1.0, -1.0,  1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+     1.0,  1.0,  1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+    
+    // Back face
+    -1.0, -1.0, -1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+    
+    // Top face
+    -1.0,  1.0, -1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0,  1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+    
+    // Bottom face
+    -1.0, -1.0, -1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
+    
+    // Right face
+     1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0,  1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+    
+    // Left face
+    -1.0, -1.0, -1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
+  ]
+
+ appendPositions(cubeVert);
+ var cubeColr = [];
+ cubeColr = cubeColr.concat(color);
+ cubeColr = cubeColr.concat(color);
+ var seColr = [ 1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 0.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
+  1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 0.0, 1.0,  0.6, 0.8, 1.0, 1.0,];
+  cubeColr = cubeColr.concat(seColr);
+  appendColors(cubeColr);
+}
+
+function resize() {
+  console.log(window.innerHeight,window.innerWidth)
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight * 0.8;
 }
