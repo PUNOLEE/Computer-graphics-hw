@@ -27,7 +27,7 @@ var THETA_NOW = 0;
 var LAST_UPDATE = -1;
 
 var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
-var g_LookAtX = -1.0, g_LookAtY = -2.0, g_LookAtZ = -0.5; // look-at point z-coordinate
+var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0; // look-at point z-coordinate
 
 var projMatrix = new Matrix4();
 var viewMatrix = new Matrix4();
@@ -41,6 +41,12 @@ var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
+  this.left = 0.0;
+  this.right = 0.0;
+  this.bottom = 0.0;
+  this.up = 0.0;
+  this.near = 1.0;
+  this.far = 100.0;
 };
 
 
@@ -53,6 +59,15 @@ window.onload = function() {
   // add controls to GUI
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
+
+  var f2 = gui.addFolder('Frustum parameters');
+  f2.add(text, 'left').onChange(setLeft);
+  // f2.add(text, 'right').onChange(setRight);
+  // f2.add(text, 'bottom').onChange(setBottom);  
+  // f2.add(text, 'up').onChange(setUp);
+  // f2.add(text, 'near').onChange(setNear);
+  // f2.add(text, 'far').onChange(setFar);
+  f2.open();
 
 };
 
@@ -115,6 +130,12 @@ function setSpeed(){
   console.log("current speed:"+ Math.floor(text.speed));
 }
 
+function setLeft(){
+  // set current speed when user changes speed control of GUI
+  //ANGLE_STEP = text.left;
+  console.log("set Left:"+ Math.floor(text.left));
+}
+
 
 function myMouseDown(ev, canvas) {
 //==============================================================================
@@ -137,7 +158,7 @@ function myMouseDown(ev, canvas) {
   
   isDrag = true;                    // set our mouse-dragging flag
   if(isDrag)
-    console.log("you are dragging your bracelet");
+    console.log("you are dragging your dode");
   xMouseclik = x;                       // record where mouse-dragging began
   yMouseclik = y;                       // using global vars (above main())
   
@@ -217,7 +238,7 @@ function dragQuat(xdrag, ydrag) {
     
     var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
     // console.log('xdrag,ydrag=',xdrag.toFixed(5),ydrag.toFixed(5),'dist=',dist.toFixed(5));
-    qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
+    qNew.setFromAxisAngle(ydrag + 0.0001, -xdrag + 0.0001, 0.0, dist*150.0);
     // (why add tiny 0.0001? To ensure we never have a zero-length rotation axis)
                 // why axis (x,y,z) = (-yMdrag,+xMdrag,0)? 
                 // -- to rotate around +x axis, drag mouse in -y direction.
@@ -285,33 +306,31 @@ function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
 
 
 function keydown(ev, gl) {// Called when user hits any key button;
-    if(ev.keyCode == 65){ //a key look left
-      if(LAST_UPDATE==-1 || LAST_UPDATE==0)
-      {
+    if(ev.keyCode == 83){ //a key look left
+      if (LAST_UPDATE == -1 || LAST_UPDATE == 0) {
         a = g_LookAtX - g_EyeX;
         b = g_LookAtY - g_EyeY;
         c = g_LookAtZ - g_EyeZ;
-        l = Math.sqrt(a*a + b*b + c*c);
-        
-        lzx = Math.sqrt(a*a+c*c);
+        l = Math.sqrt(a * a + b * b + c * c);
+
+        lzx = Math.sqrt(a * a + c * c);
         sin_phi = lzx / l;
 
-        theta0 = Math.PI -  Math.asin(a/lzx);
+        theta0 = Math.PI - Math.asin(a / lzx);
 
         THETA_NOW = theta0 + LOOK_STEP;
-        
-        LAST_UPDATE = 1;
-      }
-      else
-      {
-        THETA_NOW += LOOK_STEP;
-      }
 
-      g_LookAtY = b + g_EyeY;
-      g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
-      g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+        LAST_UPDATE = 1;
+    } else {
+        THETA_NOW += LOOK_STEP;
     }
-    if(ev.keyCode == 68){ //d key look right
+
+    g_LookAtY = b + g_EyeY;
+    g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
+    g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+    console.log(g_LookAtY, g_LookAtX, g_LookAtZ);
+    }
+    if(ev.keyCode == 87){ //d key look right
       if (LAST_UPDATE==-1 || LAST_UPDATE==0)
       {
         a = g_LookAtX - g_EyeX;
@@ -336,7 +355,7 @@ function keydown(ev, gl) {// Called when user hits any key button;
       g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
       g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
     }
-    if(ev.keyCode == 87){ // w key look up
+    if(ev.keyCode == 68){ // w key look up
       if (LAST_UPDATE==-1 || LAST_UPDATE==1)
       {  
         a = g_LookAtX - g_EyeX;
@@ -359,7 +378,7 @@ function keydown(ev, gl) {// Called when user hits any key button;
       g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
       g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
     }
-    if(ev.keyCode == 83){ // s key look down
+    if(ev.keyCode == 65){ // s key look down
       if(LAST_UPDATE==-1 || LAST_UPDATE==1)
       { 
         a = g_LookAtX - g_EyeX;
@@ -417,8 +436,8 @@ function keydown(ev, gl) {// Called when user hits any key button;
     if(ev.keyCode == 39){ // Right arrow key step right
       up = new Vector3();
       up[0] = 0;
-      up[1] = 1;
-      up[2] = 0;
+      up[1] = 0;
+      up[2] = 1;
       look = new Vector3();
       look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
 
@@ -438,8 +457,8 @@ function keydown(ev, gl) {// Called when user hits any key button;
     if(ev.keyCode == 37){// Left arrow key step left
       up = new Vector3();
       up[0] = 0;
-      up[1] = 1;
-      up[2] = 0;
+      up[1] = 0;
+      up[2] = 1;
       look = new Vector3();
       look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
 
@@ -463,7 +482,7 @@ function drawView(gl){
   gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, canvas.width / 2, canvas.height);
   viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
-    g_LookAtX, g_LookAtY, g_LookAtZ, //-1.0, -2.0, -0.5,      // look-at point 
+    g_LookAtX, g_LookAtY, g_LookAtZ,      // look-at point 
      0.0,  0.0,  1.0);     // 'up' vector
   projMatrix.setPerspective(35, (0.5 * canvas.width) / canvas.height, 1, 100);
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
@@ -472,11 +491,11 @@ function drawView(gl){
   draw(gl);
 
   gl.viewport(canvas.width / 2, 0, canvas.width / 2, canvas.height);
-  projMatrix.setOrtho(-0.5*canvas.width/500, 0.5*canvas.width/500,          // left,right;
-    -canvas.height/500, canvas.height/500,          // bottom, top;
-    1, 100);       // near, far; (always >=0)
+  projMatrix.setOrtho(-0.5*canvas.width/300, 0.5*canvas.width/300,          // left,right;
+    -canvas.height/300, canvas.height/300,          // bottom, top;
+    1, 1000);       // near, far; (always >=0)
   viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
-    g_LookAtX, g_LookAtY, g_LookAtZ, //-1.0, -2.0, -0.5,      // look-at point 
+    g_LookAtX, g_LookAtY, g_LookAtZ,   // look-at point 
       0.0,  0.0,  1.0);     // 'up' vector
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
@@ -485,12 +504,13 @@ function drawView(gl){
 }
 function draw(gl) {
   // Draw a new on-screen image.
-
+  modelMatrix.setIdentity(); 
+  drawAxes(gl);
   // Be sure to clear the screen before re-drawing ...
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   drawGround(gl);
-  drawAxes(gl);
+  
   modelMatrix = popMatrix(); 
   pushMatrix(modelMatrix); 
   // draw tetrahedron 
@@ -517,7 +537,7 @@ function draw(gl) {
   // spinning  dodecahedron;
   modelMatrix.setTranslate(0.42, 0.4, 0.0); 
   
-  modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+  //modelMatrix.rotate(180, 1, 1, 0); // Rotate around the y-axis
     // Let mouse-drag move the drawing axes before we do any other drawing:
   quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
   modelMatrix.concat(quatMatrix); // apply that matrix.
