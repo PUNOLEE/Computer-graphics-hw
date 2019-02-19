@@ -20,8 +20,15 @@ var heartSizeStep = 0.1;
 var text;
 var floatsPerVertex = 4;
 
+var MOVE_STEP = 0.15;
+var LOOK_STEP = 0.02;
+var PHI_NOW = 0;
+var THETA_NOW = 0;
+var LAST_UPDATE = -1;
+
 var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
-var g_LookAtX = -1.0, g_LookAtY = -2.0, g_LookAtZ = -0.5;
+var g_LookAtX = -1.0, g_LookAtY = -2.0, g_LookAtZ = -0.5; // look-at point z-coordinate
+
 var projMatrix = new Matrix4();
 var viewMatrix = new Matrix4();
 var mvpMatrix = new Matrix4();
@@ -34,7 +41,6 @@ var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
-  this.heartSize = 1.0;
 };
 
 
@@ -47,7 +53,6 @@ window.onload = function() {
   // add controls to GUI
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
-  gui.add(text, 'heartSize', 0,1).onChange(setHeartSize);
 
 };
 
@@ -109,13 +114,6 @@ function setSpeed(){
   ANGLE_STEP = text.speed;
   console.log("current speed:"+ Math.floor(text.speed));
 }
-
-function setHeartSize(){
-  // set current heart size when user changes heartSize control of GUI
-  heartSize = text.heartSize;
-  console.log("current heartSize:"+  text.heartSize);
-}
-
 
 
 function myMouseDown(ev, canvas) {
@@ -251,42 +249,213 @@ function dragQuat(xdrag, ydrag) {
                               '<br>length='+qTot.length().toFixed(res);
   };
 
+function vec3FromEye2LookAt(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ)
+{
+  result = new Vector3();
+  
+  dx = lookAtX - eyeX;
+  dy = lookAtY - eyeY;
+  dz = lookAtZ - eyeZ;
+  amp = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+  result[0] = dx/amp;
+  result[1] = dy/amp;
+  result[2] = dz/amp;
+
+  return result;
+}
+
+function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
+{
+  r = new Vector3();
+
+  r[0] = up[1]*look[2] - up[2]*look[1];
+  console.log('up1', up[1]);
+  r[1] = up[2]*look[0] - up[0]*look[2];
+  r[2] = up[0]*look[1] - up[1]*look[0];
+
+  amp = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001;
+
+  r[0] /= amp;
+  r[1] /= amp;
+  r[2] /= amp;
+
+  return r;
+}
+
 
 function keydown(ev, gl) {// Called when user hits any key button;
-  switch (ev.keyCode) {
-    case 65: //a key
-      console.log(' a key.');
-      heartY -= step;
-      console.log("heart dish Y pos:" + heartY);
-      break;
-    case 68: //d key
-      console.log(' d key.');
-      heartY += step;
-      console.log("heart dish Y pos:" + heartY);
-      break;
-    case 40: // Up arrow key
-      console.log(' up-arrow.');
-      myY -= step;
-      console.log("bracelet Y pos:" + myY);
-      break;
-    case 38: // Down arrow key
-      console.log(' down-arrow.');
-      myY += step;
-      console.log("bracelet Y pos:" + myY);
-      break;
-    case 39: // Right arrow key -> the positive rotation around the y-axis
-      console.log(' right-arrow.');
-      currentAngle = (currentAngle + 3.0) % 360;
-      console.log("bracelet currentAngle:" + currentAngle);
-      break;
-    case 37: // Left arrow key -> the negative rotation around the y-axis
-      console.log(' left-arrow.');
-      currentAngle = (currentAngle - 3.0) % 360;
-      console.log("bracelet currentAngle:" + currentAngle);
-      break;
-    default:
-      return; // Skip drawing at no effective action
-  }
+    if(ev.keyCode == 65){ //a key look left
+      if(LAST_UPDATE==-1 || LAST_UPDATE==0)
+      {
+        a = g_LookAtX - g_EyeX;
+        b = g_LookAtY - g_EyeY;
+        c = g_LookAtZ - g_EyeZ;
+        l = Math.sqrt(a*a + b*b + c*c);
+        
+        lzx = Math.sqrt(a*a+c*c);
+        sin_phi = lzx / l;
+
+        theta0 = Math.PI -  Math.asin(a/lzx);
+
+        THETA_NOW = theta0 + LOOK_STEP;
+        
+        LAST_UPDATE = 1;
+      }
+      else
+      {
+        THETA_NOW += LOOK_STEP;
+      }
+
+      g_LookAtY = b + g_EyeY;
+      g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
+      g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+    }
+    if(ev.keyCode == 68){ //d key look right
+      if (LAST_UPDATE==-1 || LAST_UPDATE==0)
+      {
+        a = g_LookAtX - g_EyeX;
+        b = g_LookAtY - g_EyeY;
+        c = g_LookAtZ - g_EyeZ;
+        l = Math.sqrt(a*a + b*b + c*c);
+        lzx = Math.sqrt(a*a+c*c);
+        sin_phi = lzx / l;
+
+        theta0 = Math.PI -  Math.asin(a/lzx);
+
+        THETA_NOW = theta0 - LOOK_STEP;
+        
+        LAST_UPDATE = 1;
+      }
+      else
+      {
+        THETA_NOW -= LOOK_STEP;
+      }
+
+      g_LookAtY = b + g_EyeY;
+      g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
+      g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+    }
+    if(ev.keyCode == 87){ // w key look up
+      if (LAST_UPDATE==-1 || LAST_UPDATE==1)
+      {  
+        a = g_LookAtX - g_EyeX;
+        b = g_LookAtY - g_EyeY;
+        c = g_LookAtZ - g_EyeZ;
+        l = Math.sqrt(a*a + b*b + c*c);
+        cos_theta = c / Math.sqrt(a*a + c*c);
+        sin_theta = a / Math.sqrt(a*a + c*c);
+
+        phi0 = Math.asin(b/l);
+
+        PHI_NOW = phi0 + LOOK_STEP;
+        LAST_UPDATE = 0;
+      }
+      else
+      {
+        PHI_NOW += LOOK_STEP;
+      }
+      g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
+      g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
+      g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
+    }
+    if(ev.keyCode == 83){ // s key look down
+      if(LAST_UPDATE==-1 || LAST_UPDATE==1)
+      { 
+        a = g_LookAtX - g_EyeX;
+        b = g_LookAtY - g_EyeY;
+        c = g_LookAtZ - g_EyeZ;
+        l = Math.sqrt(a*a + b*b + c*c);
+
+        cos_theta = c / Math.sqrt(a*a + c*c);
+        sin_theta = a / Math.sqrt(a*a + c*c);
+
+        phi0 = Math.asin(b/l);
+
+        PHI_NOW = phi0 - LOOK_STEP;
+        
+        
+        LAST_UPDATE = 0;
+      }
+      else
+      {
+        PHI_NOW -= LOOK_STEP;
+      }
+
+      g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
+      g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
+      g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ; 
+      }
+      if(ev.keyCode == 38){ // Up arrow key step forward
+      tmpVec3 = new Vector3();
+      tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+      
+      g_EyeX += MOVE_STEP * tmpVec3[0];
+      g_EyeY += MOVE_STEP * tmpVec3[1];
+      g_EyeZ += MOVE_STEP * tmpVec3[2];
+
+      g_LookAtX += MOVE_STEP * tmpVec3[0];
+      g_LookAtY += MOVE_STEP * tmpVec3[1];
+      g_LookAtZ += MOVE_STEP * tmpVec3[2];
+
+      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+       }
+    if(ev.keyCode == 40){ // Down arrow key step backward
+      tmpVec3 = new Vector3();
+      tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+      
+      g_EyeX -= MOVE_STEP * tmpVec3[0];
+      g_EyeY -= MOVE_STEP * tmpVec3[1];
+      g_EyeZ -= MOVE_STEP * tmpVec3[2];
+
+      g_LookAtX -= MOVE_STEP * tmpVec3[0];
+      g_LookAtY -= MOVE_STEP * tmpVec3[1];
+      g_LookAtZ -= MOVE_STEP * tmpVec3[2];
+
+      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+    }
+    if(ev.keyCode == 39){ // Right arrow key step right
+      up = new Vector3();
+      up[0] = 0;
+      up[1] = 1;
+      up[2] = 0;
+      look = new Vector3();
+      look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+
+      tmpVec3 = new Vector3();
+      tmpVec3 = vec3CrossProduct(up, look);
+
+      g_EyeX -= MOVE_STEP * tmpVec3[0];
+      g_EyeY -= MOVE_STEP * tmpVec3[1];
+      g_EyeZ -= MOVE_STEP * tmpVec3[2];
+
+      g_LookAtX -= MOVE_STEP * tmpVec3[0];
+      g_LookAtY -= MOVE_STEP * tmpVec3[1];
+      g_LookAtZ -= MOVE_STEP * tmpVec3[2];
+
+      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+       }
+    if(ev.keyCode == 37){// Left arrow key step left
+      up = new Vector3();
+      up[0] = 0;
+      up[1] = 1;
+      up[2] = 0;
+      look = new Vector3();
+      look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+
+      tmpVec3 = new Vector3();
+      tmpVec3 = vec3CrossProduct(up, look);
+
+      g_EyeX += MOVE_STEP * tmpVec3[0];
+      g_EyeY += MOVE_STEP * tmpVec3[1];
+      g_EyeZ += MOVE_STEP * tmpVec3[2];
+
+      g_LookAtX += MOVE_STEP * tmpVec3[0];
+      g_LookAtY += MOVE_STEP * tmpVec3[1];
+      g_LookAtZ += MOVE_STEP * tmpVec3[2];
+      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+    }
+
   // Draw all
   drawView(gl);
 }
@@ -300,20 +469,12 @@ function drawView(gl){
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
 
-  // modelMatrix.setIdentity();    // DEFINE 'world-space' coords.
-
   draw(gl);
 
   gl.viewport(canvas.width / 2, 0, canvas.width / 2, canvas.height);
   projMatrix.setOrtho(-0.5*canvas.width/500, 0.5*canvas.width/500,          // left,right;
     -canvas.height/500, canvas.height/500,          // bottom, top;
     1, 100);       // near, far; (always >=0)
-  // projMatrix.setOrtho(-1, 1, // left,right;
-  //   -1, 1, // bottom, top;
-  //   1, 100); // near, far; (always >=0)
-  // viewMatrix.setLookAt(0, 0, 5, // eye position
-  //   1, 1, -2, // look-at point
-  //   0, 0, 1);
   viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
     g_LookAtX, g_LookAtY, g_LookAtZ, //-1.0, -2.0, -0.5,      // look-at point 
       0.0,  0.0,  1.0);     // 'up' vector
@@ -367,46 +528,9 @@ function draw(gl) {
   modelMatrix = popMatrix(); 
 
   pushMatrix(modelMatrix); 
-//draw heart
 
-  // Let key board clicks move the drawing axes before we do any other drawing:
+//draw hearts
   modelMatrix.setTranslate(1.5, -0.2, 0.0);
-  // Let GUI controls change the drawing heart size before we do any other drawing:
-  //modelMatrix.scale(0.5,0.5,0.5); 
-
-  // pushMatrix(modelMatrix); 
-  // // Rocking 1st hollow BASE heart:-----------------------------------
-  // var size = 0.15;
-  // modelMatrix.translate(-0.5, 0.0, 0.0); 
-  // modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
-  // drawheart(gl,size);
-  // // END of Rocking 1st hollow BASE heart:---------------------------- 
-
-  //  pushMatrix(modelMatrix); 
-  // // Rocking 2nd hollow heart:-----------------------------------
-  // // on the bottom of the 1st hollow heart
-  //  modelMatrix.translate(0.0, -0.35, 0.0); 
-  //  //drawAxes(gl);
-  //  drawheart(gl,size);
-  // // END of Rocking 2nd hollow heart:---------------------------- 
-  //  modelMatrix = popMatrix();
-
-  // pushMatrix(modelMatrix); 
-  // // Rocking hollow LINE heart:-----------------------------------
-  // // on the top of BASE heart
-  //  var sizeThird = 0.14;
-
-  //  modelMatrix.translate(0.0, 0.1, 0.0); 
-  //  modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
-  //  modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-  //  modelMatrix.translate(0.0, 0.23, 0.0); 
-
-  //  drawheart(gl,sizeThird);
-  // // END of Rocking hollow LINE heart:---------------------------- 
-  //  modelMatrix = popMatrix();
-   
-  //  modelMatrix = popMatrix();
-
 
    pushMatrix(modelMatrix); 
 // Rocking the heart-shaped dish:-----------------------------------
@@ -980,7 +1104,6 @@ function makeCube(){
 }
 
 function resize() {
-  console.log(window.innerHeight,window.innerWidth)
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight * 0.8;
 }
