@@ -26,8 +26,8 @@ var PHI_NOW = 0;
 var THETA_NOW = 0;
 var LAST_UPDATE = -1;
 
-var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
-var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0; // look-at point z-coordinate
+// var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
+// var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0; // look-at point z-coordinate
 
 var projMatrix = new Matrix4();
 var viewMatrix = new Matrix4();
@@ -238,7 +238,7 @@ function dragQuat(xdrag, ydrag) {
     
     var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
     // console.log('xdrag,ydrag=',xdrag.toFixed(5),ydrag.toFixed(5),'dist=',dist.toFixed(5));
-    qNew.setFromAxisAngle(ydrag + 0.0001, -xdrag + 0.0001, 0.0, dist*150.0);
+    qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
     // (why add tiny 0.0001? To ensure we never have a zero-length rotation axis)
                 // why axis (x,y,z) = (-yMdrag,+xMdrag,0)? 
                 // -- to rotate around +x axis, drag mouse in -y direction.
@@ -270,6 +270,200 @@ function dragQuat(xdrag, ydrag) {
                               '<br>length='+qTot.length().toFixed(res);
   };
 
+
+function keydown(ev, gl) {// Called when user hits any key button;
+    
+  if(ev.keyCode == 39) { // right arrow - step right
+    up = new Vector3();
+    up[0] = 0;
+    up[1] = 1;
+    up[2] = 0;
+    look = new Vector3();
+    look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+
+    tmpVec3 = new Vector3();
+    tmpVec3 = vec3CrossProduct(up, look);
+
+    //console.log(tmpVec3[0], tmpVec3[1], tmpVec3[2]);
+
+    g_EyeX -= MOVE_STEP * tmpVec3[0];
+    g_EyeY -= MOVE_STEP * tmpVec3[1];
+    g_EyeZ -= MOVE_STEP * tmpVec3[2];
+
+    g_LookAtX -= MOVE_STEP * tmpVec3[0];
+    g_LookAtY -= MOVE_STEP * tmpVec3[1];
+    g_LookAtZ -= MOVE_STEP * tmpVec3[2];
+
+    console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+} 
+else 
+if (ev.keyCode == 37) { // left arrow - step left
+    up = new Vector3();
+    up[0] = 0;
+    up[1] = 1;
+    up[2] = 0;
+    look = new Vector3();
+    look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+
+    tmpVec3 = new Vector3();
+    tmpVec3 = vec3CrossProduct(up, look);
+
+    //console.log(tmpVec3[0], tmpVec3[1], tmpVec3[2]);
+
+    g_EyeX += MOVE_STEP * tmpVec3[0];
+    g_EyeY += MOVE_STEP * tmpVec3[1];
+    g_EyeZ += MOVE_STEP * tmpVec3[2];
+
+    g_LookAtX += MOVE_STEP * tmpVec3[0];
+    g_LookAtY += MOVE_STEP * tmpVec3[1];
+    g_LookAtZ += MOVE_STEP * tmpVec3[2];
+
+    console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+} 
+else 
+if (ev.keyCode == 38) { // up arrow - step forward
+
+    tmpVec3 = new Vector3();
+    tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+    
+    g_EyeX += MOVE_STEP * tmpVec3[0];
+    g_EyeY += MOVE_STEP * tmpVec3[1];
+    g_EyeZ += MOVE_STEP * tmpVec3[2];
+
+    g_LookAtX += MOVE_STEP * tmpVec3[0];
+    g_LookAtY += MOVE_STEP * tmpVec3[1];
+    g_LookAtZ += MOVE_STEP * tmpVec3[2];
+
+    console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+
+} 
+else 
+if (ev.keyCode == 40) { // down arrow - step backward
+    tmpVec3 = new Vector3();
+    tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+    
+    g_EyeX -= MOVE_STEP * tmpVec3[0];
+    g_EyeY -= MOVE_STEP * tmpVec3[1];
+    g_EyeZ -= MOVE_STEP * tmpVec3[2];
+
+    g_LookAtX -= MOVE_STEP * tmpVec3[0];
+    g_LookAtY -= MOVE_STEP * tmpVec3[1];
+    g_LookAtZ -= MOVE_STEP * tmpVec3[2];
+
+    console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
+} 
+else
+if (ev.keyCode == 65){ // a - look left
+  if(LAST_UPDATE==-1 || LAST_UPDATE==0)
+    {
+      a = g_LookAtX - g_EyeX;
+      b = g_LookAtY - g_EyeY;
+      c = g_LookAtZ - g_EyeZ;
+      l = Math.sqrt(a*a + b*b + c*c);
+      
+      lzx = Math.sqrt(a*a+c*c);
+      sin_phi = lzx / l;
+
+      theta0 = Math.PI -  Math.asin(a/lzx);
+
+      THETA_NOW = theta0 + LOOK_STEP;
+      
+      LAST_UPDATE = 1;
+    }
+    else
+    {
+      THETA_NOW += LOOK_STEP;
+    }
+
+    g_LookAtY = b + g_EyeY;
+    g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
+    g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+}
+
+else
+  if(ev.keyCode==68){//d - look right
+    if (LAST_UPDATE==-1 || LAST_UPDATE==0)
+    {
+      a = g_LookAtX - g_EyeX;
+      b = g_LookAtY - g_EyeY;
+      c = g_LookAtZ - g_EyeZ;
+      l = Math.sqrt(a*a + b*b + c*c);
+      lzx = Math.sqrt(a*a+c*c);
+      sin_phi = lzx / l;
+
+      theta0 = Math.PI -  Math.asin(a/lzx);
+
+      THETA_NOW = theta0 - LOOK_STEP;
+      
+      LAST_UPDATE = 1;
+    }
+    else
+    {
+      THETA_NOW -= LOOK_STEP;
+    }
+
+    g_LookAtY = b + g_EyeY;
+    g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
+    g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
+  }
+else
+  if(ev.keyCode==87){ //w - look up
+    if (LAST_UPDATE==-1 || LAST_UPDATE==1)
+    {  
+      a = g_LookAtX - g_EyeX;
+      b = g_LookAtY - g_EyeY;
+      c = g_LookAtZ - g_EyeZ;
+      l = Math.sqrt(a*a + b*b + c*c);
+      cos_theta = c / Math.sqrt(a*a + c*c);
+      sin_theta = a / Math.sqrt(a*a + c*c);
+
+      phi0 = Math.asin(b/l);
+
+      PHI_NOW = phi0 + LOOK_STEP;
+      LAST_UPDATE = 0;
+    }
+    else
+    {
+      PHI_NOW += LOOK_STEP;
+    }
+
+    g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
+    g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
+    g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
+  }
+else
+  if(ev.keyCode==83){ //s-look down
+    if(LAST_UPDATE==-1 || LAST_UPDATE==1)
+    { 
+      a = g_LookAtX - g_EyeX;
+      b = g_LookAtY - g_EyeY;
+      c = g_LookAtZ - g_EyeZ;
+      l = Math.sqrt(a*a + b*b + c*c);
+
+      cos_theta = c / Math.sqrt(a*a + c*c);
+      sin_theta = a / Math.sqrt(a*a + c*c);
+
+      phi0 = Math.asin(b/l);
+
+      PHI_NOW = phi0 - LOOK_STEP;
+      
+      
+      LAST_UPDATE = 0;
+    }
+    else
+    {
+      PHI_NOW -= LOOK_STEP;
+    }
+
+    g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
+    g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
+    g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
+  }
+else { return; } // Prevent the unnecessary drawing
+  // Draw all
+  //drawView(gl);
+}
+
 function vec3FromEye2LookAt(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ)
 {
   result = new Vector3();
@@ -291,7 +485,6 @@ function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
   r = new Vector3();
 
   r[0] = up[1]*look[2] - up[2]*look[1];
-  console.log('up1', up[1]);
   r[1] = up[2]*look[0] - up[0]*look[2];
   r[2] = up[0]*look[1] - up[1]*look[0];
 
@@ -304,199 +497,28 @@ function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
   return r;
 }
 
+var g_EyeX = 0.20, g_EyeY = 0.25, g_EyeZ = 4.25; 
+var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;
 
-function keydown(ev, gl) {// Called when user hits any key button;
-    if(ev.keyCode == 83){ //a key look left
-      if (LAST_UPDATE == -1 || LAST_UPDATE == 0) {
-        a = g_LookAtX - g_EyeX;
-        b = g_LookAtY - g_EyeY;
-        c = g_LookAtZ - g_EyeZ;
-        l = Math.sqrt(a * a + b * b + c * c);
-
-        lzx = Math.sqrt(a * a + c * c);
-        sin_phi = lzx / l;
-
-        theta0 = Math.PI - Math.asin(a / lzx);
-
-        THETA_NOW = theta0 + LOOK_STEP;
-
-        LAST_UPDATE = 1;
-    } else {
-        THETA_NOW += LOOK_STEP;
-    }
-
-    g_LookAtY = b + g_EyeY;
-    g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
-    g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
-    console.log(g_LookAtY, g_LookAtX, g_LookAtZ);
-    }
-    if(ev.keyCode == 87){ //d key look right
-      if (LAST_UPDATE==-1 || LAST_UPDATE==0)
-      {
-        a = g_LookAtX - g_EyeX;
-        b = g_LookAtY - g_EyeY;
-        c = g_LookAtZ - g_EyeZ;
-        l = Math.sqrt(a*a + b*b + c*c);
-        lzx = Math.sqrt(a*a+c*c);
-        sin_phi = lzx / l;
-
-        theta0 = Math.PI -  Math.asin(a/lzx);
-
-        THETA_NOW = theta0 - LOOK_STEP;
-        
-        LAST_UPDATE = 1;
-      }
-      else
-      {
-        THETA_NOW -= LOOK_STEP;
-      }
-
-      g_LookAtY = b + g_EyeY;
-      g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
-      g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
-    }
-    if(ev.keyCode == 68){ // w key look up
-      if (LAST_UPDATE==-1 || LAST_UPDATE==1)
-      {  
-        a = g_LookAtX - g_EyeX;
-        b = g_LookAtY - g_EyeY;
-        c = g_LookAtZ - g_EyeZ;
-        l = Math.sqrt(a*a + b*b + c*c);
-        cos_theta = c / Math.sqrt(a*a + c*c);
-        sin_theta = a / Math.sqrt(a*a + c*c);
-
-        phi0 = Math.asin(b/l);
-
-        PHI_NOW = phi0 + LOOK_STEP;
-        LAST_UPDATE = 0;
-      }
-      else
-      {
-        PHI_NOW += LOOK_STEP;
-      }
-      g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
-      g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
-      g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
-    }
-    if(ev.keyCode == 65){ // s key look down
-      if(LAST_UPDATE==-1 || LAST_UPDATE==1)
-      { 
-        a = g_LookAtX - g_EyeX;
-        b = g_LookAtY - g_EyeY;
-        c = g_LookAtZ - g_EyeZ;
-        l = Math.sqrt(a*a + b*b + c*c);
-
-        cos_theta = c / Math.sqrt(a*a + c*c);
-        sin_theta = a / Math.sqrt(a*a + c*c);
-
-        phi0 = Math.asin(b/l);
-
-        PHI_NOW = phi0 - LOOK_STEP;
-        
-        
-        LAST_UPDATE = 0;
-      }
-      else
-      {
-        PHI_NOW -= LOOK_STEP;
-      }
-
-      g_LookAtY = l * Math.sin(PHI_NOW) + g_EyeY;
-      g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
-      g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ; 
-      }
-      if(ev.keyCode == 38){ // Up arrow key step forward
-      tmpVec3 = new Vector3();
-      tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-      
-      g_EyeX += MOVE_STEP * tmpVec3[0];
-      g_EyeY += MOVE_STEP * tmpVec3[1];
-      g_EyeZ += MOVE_STEP * tmpVec3[2];
-
-      g_LookAtX += MOVE_STEP * tmpVec3[0];
-      g_LookAtY += MOVE_STEP * tmpVec3[1];
-      g_LookAtZ += MOVE_STEP * tmpVec3[2];
-
-      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
-       }
-    if(ev.keyCode == 40){ // Down arrow key step backward
-      tmpVec3 = new Vector3();
-      tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-      
-      g_EyeX -= MOVE_STEP * tmpVec3[0];
-      g_EyeY -= MOVE_STEP * tmpVec3[1];
-      g_EyeZ -= MOVE_STEP * tmpVec3[2];
-
-      g_LookAtX -= MOVE_STEP * tmpVec3[0];
-      g_LookAtY -= MOVE_STEP * tmpVec3[1];
-      g_LookAtZ -= MOVE_STEP * tmpVec3[2];
-
-      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
-    }
-    if(ev.keyCode == 39){ // Right arrow key step right
-      up = new Vector3();
-      up[0] = 0;
-      up[1] = 0;
-      up[2] = 1;
-      look = new Vector3();
-      look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-
-      tmpVec3 = new Vector3();
-      tmpVec3 = vec3CrossProduct(up, look);
-
-      g_EyeX -= MOVE_STEP * tmpVec3[0];
-      g_EyeY -= MOVE_STEP * tmpVec3[1];
-      g_EyeZ -= MOVE_STEP * tmpVec3[2];
-
-      g_LookAtX -= MOVE_STEP * tmpVec3[0];
-      g_LookAtY -= MOVE_STEP * tmpVec3[1];
-      g_LookAtZ -= MOVE_STEP * tmpVec3[2];
-
-      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
-       }
-    if(ev.keyCode == 37){// Left arrow key step left
-      up = new Vector3();
-      up[0] = 0;
-      up[1] = 0;
-      up[2] = 1;
-      look = new Vector3();
-      look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-
-      tmpVec3 = new Vector3();
-      tmpVec3 = vec3CrossProduct(up, look);
-
-      g_EyeX += MOVE_STEP * tmpVec3[0];
-      g_EyeY += MOVE_STEP * tmpVec3[1];
-      g_EyeZ += MOVE_STEP * tmpVec3[2];
-
-      g_LookAtX += MOVE_STEP * tmpVec3[0];
-      g_LookAtY += MOVE_STEP * tmpVec3[1];
-      g_LookAtZ += MOVE_STEP * tmpVec3[2];
-      console.log('eyeX=',g_EyeX, 'eyeY=', g_EyeY, 'eyeZ=', g_EyeZ, 'lookAtX=', g_LookAtX, 'lookAtY=', g_LookAtY, 'lookAtZ=', g_LookAtZ);
-    }
-
-  // Draw all
-  drawView(gl);
-}
 function drawView(gl){
   gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, canvas.width / 2, canvas.height);
-  viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
-    g_LookAtX, g_LookAtY, g_LookAtZ,      // look-at point 
-     0.0,  0.0,  1.0);     // 'up' vector
   projMatrix.setPerspective(35, (0.5 * canvas.width) / canvas.height, 1, 100);
+  viewMatrix.setLookAt(g_EyeX,g_EyeY, g_EyeZ,      // center of projection
+    g_LookAtX, g_LookAtY, g_LookAtZ,      // look-at point 
+     0,  1,  0);     // 'up' vector
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
 
   draw(gl);
 
   gl.viewport(canvas.width / 2, 0, canvas.width / 2, canvas.height);
-  projMatrix.setOrtho(-0.5*canvas.width/300, 0.5*canvas.width/300,          // left,right;
-    -canvas.height/300, canvas.height/300,          // bottom, top;
-    1, 1000);       // near, far; (always >=0)
-  viewMatrix.setLookAt(g_EyeY, g_EyeX, g_EyeZ,      // center of projection
+  projMatrix.setOrtho(-0.5*canvas.width/500, 0.5*canvas.width/500,          // left,right;
+    -canvas.height/500, canvas.height/500,          // bottom, top;
+    1, 100);       // near, far; (always >=0)
+  viewMatrix.setLookAt(g_EyeX,g_EyeY, g_EyeZ,      // center of projection
     g_LookAtX, g_LookAtY, g_LookAtZ,   // look-at point 
-      0.0,  0.0,  1.0);     // 'up' vector
+      0,  1,  0);     // 'up' vector
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
   draw(gl);
@@ -505,37 +527,47 @@ function drawView(gl){
 function draw(gl) {
   // Draw a new on-screen image.
   modelMatrix.setIdentity(); 
-  drawAxes(gl);
-  // Be sure to clear the screen before re-drawing ...
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
+  modelMatrix.rotate(70,1,0,0);
+  // Be sure to clear the screen before re-drawing ...
+  //modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
+  modelMatrix.setTranslate(0.0, 0.0, 0.0);
+  viewMatrix.rotate(-90.0, 1,0,0); 
+  viewMatrix.translate(0.0, 0.0, -0.6); 
+  viewMatrix.scale(0.6, 0.6,0.6);  
+ 
   drawGround(gl);
-  
+  modelMatrix.setTranslate(0.3,-2,0);
+  drawAxes(gl);
   modelMatrix = popMatrix(); 
   pushMatrix(modelMatrix); 
   // draw tetrahedron 
-  modelMatrix.translate(-1,-0.4, 0.0); 
-  drawAxes(gl);
-  modelMatrix.scale(0.4,0.4,0.4);
+  modelMatrix.setTranslate(-1.5,-1,0);
+  
   modelMatrix.rotate(-currentAngle, 0, 0, 1);
+  drawAxes(gl);
+  modelMatrix.scale(0.4, 0.4, 0.4);
   drawFullWedge(gl);
   modelMatrix = popMatrix();
   pushMatrix(modelMatrix);
-  modelMatrix.setTranslate(-0.4, -1, 0.0);
+  // draw toru
+  modelMatrix.setTranslate(-0.4, -1, 0.2);
   modelMatrix.scale(1,1,-1);	
   modelMatrix.scale(0.3, 0.3, 0.3);
   modelMatrix.rotate(currentAngle, 0, 1, 1);
   drawToru(gl);
   modelMatrix = popMatrix();
   pushMatrix(modelMatrix);
-  modelMatrix.setTranslate(1.5, 1.5, 0.0);
+  //draw cube
+  modelMatrix.setTranslate(1.5, 1.5, 0.3);
   modelMatrix.scale(0.3, 0.3, 0.3);
-  modelMatrix.rotate(currentAngle, 0, 1, 1);
+  modelMatrix.rotate(currentAngle, 0, 0, 1);
   drawCube(gl);
   modelMatrix = popMatrix();
   pushMatrix(modelMatrix);
   // spinning  dodecahedron;
-  modelMatrix.setTranslate(0.42, 0.4, 0.0); 
+  modelMatrix.setTranslate(0.42, 0.4, 0.5); 
   
   //modelMatrix.rotate(180, 1, 1, 0); // Rotate around the y-axis
     // Let mouse-drag move the drawing axes before we do any other drawing:
@@ -550,7 +582,7 @@ function draw(gl) {
   pushMatrix(modelMatrix); 
 
 //draw hearts
-  modelMatrix.setTranslate(1.5, -0.2, 0.0);
+  modelMatrix.setTranslate(1.5, -0.6, 0.0);
 
    pushMatrix(modelMatrix); 
 // Rocking the heart-shaped dish:-----------------------------------
@@ -605,6 +637,8 @@ function draw(gl) {
 function drawMess(gl) {
   
   pushMatrix(modelMatrix);
+
+  updateModelMatrix(modelMatrix);
   // Calculate the model view projection matrix
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
@@ -620,6 +654,7 @@ function drawMess(gl) {
 function drawAxes(gl) {
   //-----------------------------------------------------------------------------
   // Calculate the model view projection matrix
+  updateModelMatrix(modelMatrix);
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
   updateMvpMatrix(mvpMatrix);
@@ -631,6 +666,7 @@ function drawFullWedge(gl) {
   // Draw all 4 triangles of our tetrahedron
   // base is in z=0 plane centered at origin; apex on z axis.
     pushMatrix(modelMatrix);  // SAVE the given myMatrix contents, then:
+    updateModelMatrix(modelMatrix);
     mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
     updateMvpMatrix(mvpMatrix);
@@ -640,6 +676,7 @@ function drawFullWedge(gl) {
 
 function drawToru(gl){
   pushMatrix(modelMatrix);
+  updateModelMatrix(modelMatrix);
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
   updateMvpMatrix(mvpMatrix);
@@ -649,6 +686,7 @@ function drawToru(gl){
 
 function drawCube(gl){
   pushMatrix(modelMatrix);
+  updateModelMatrix(modelMatrix);
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
   updateMvpMatrix(mvpMatrix);
@@ -661,6 +699,7 @@ function drawheart(gl, size){
   pushMatrix(modelMatrix);
   
   modelMatrix.scale(size,size,size); 
+  updateModelMatrix(modelMatrix);
   // Calculate the model view projection matrix
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
