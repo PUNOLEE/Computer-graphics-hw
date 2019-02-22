@@ -473,17 +473,11 @@ function cross(a,b)
           a[0] * b[1] - a[1] * b[0]];
 }
 
-function normal(crossV)
+function normal(r)
 {
-  r = new Vector3();
+  var len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001; // prevent divide by 0
 
-  var len = Math.sqrt(crossV[0]*crossV[0] + crossV[1]*crossV[1] + crossV[2]*crossV[2]) + 0.000001;
-
-  r[0] = crossV[0]/len;
-  r[1] = crossV[1]/len;
-  r[2] = crossV[2]/len;
-
-  return r;
+  return [r[0]/len,r[1]/len,r[2]/len];
 }
 
 
