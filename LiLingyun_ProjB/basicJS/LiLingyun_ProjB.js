@@ -26,8 +26,8 @@ var PHI_NOW = 0;
 var THETA_NOW = 0;
 var LAST_UPDATE = -1;
 
-// var g_EyeX = 5.0, g_EyeY = 5.0, g_EyeZ = 3.0; // Eye position
-// var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0; // look-at point z-coordinate
+var g_EyeX = 0.30, g_EyeY = 0.30, g_EyeZ = 4.0; // Eye position
+var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;// look-at point z-coordinate
 
 var projMatrix = new Matrix4();
 var viewMatrix = new Matrix4();
@@ -131,8 +131,6 @@ function setSpeed(){
 }
 
 function setLeft(){
-  // set current speed when user changes speed control of GUI
-  //ANGLE_STEP = text.left;
   console.log("set Left:"+ Math.floor(text.left));
 }
 
@@ -379,7 +377,6 @@ if (ev.keyCode == 65){ // a - look left
     g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
     g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
 }
-
 else
   if(ev.keyCode==68){//d - look right
     if (LAST_UPDATE==-1 || LAST_UPDATE==0)
@@ -459,9 +456,6 @@ else
     g_LookAtX = l * Math.cos(PHI_NOW) * sin_theta + g_EyeX;
     g_LookAtZ = l * Math.cos(PHI_NOW) * cos_theta + g_EyeZ;
   }
-else { return; } // Prevent the unnecessary drawing
-  // Draw all
-  //drawView(gl);
 }
 
 function vec3FromEye2LookAt(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ)
@@ -497,8 +491,6 @@ function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
   return r;
 }
 
-var g_EyeX = 0.20, g_EyeY = 0.25, g_EyeZ = 4.25; 
-var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;
 
 function drawView(gl){
   gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
@@ -513,8 +505,8 @@ function drawView(gl){
   draw(gl);
 
   gl.viewport(canvas.width / 2, 0, canvas.width / 2, canvas.height);
-  projMatrix.setOrtho(-0.5*canvas.width/500, 0.5*canvas.width/500,          // left,right;
-    -canvas.height/500, canvas.height/500,          // bottom, top;
+  projMatrix.setOrtho(-0.5*canvas.width/600, 0.5*canvas.width/600,          // left,right;
+    -canvas.height/600, canvas.height/600,          // bottom, top;
     1, 100);       // near, far; (always >=0)
   viewMatrix.setLookAt(g_EyeX,g_EyeY, g_EyeZ,      // center of projection
     g_LookAtX, g_LookAtY, g_LookAtZ,   // look-at point 
@@ -533,18 +525,20 @@ function draw(gl) {
   //modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
+  // draw ground grid
   viewMatrix.rotate(-90.0, 1,0,0); 
   viewMatrix.translate(0.0, 0.0, -0.6); 
   viewMatrix.scale(0.6, 0.6,0.6);  
  
   drawGround(gl);
   modelMatrix.setTranslate(0.3,-2,0);
+  // draw ground axes
   drawAxes(gl);
   modelMatrix = popMatrix(); 
   pushMatrix(modelMatrix); 
+
   // draw tetrahedron 
   modelMatrix.setTranslate(-1.5,-1,0);
-  
   modelMatrix.rotate(-currentAngle, 0, 0, 1);
   drawAxes(gl);
   modelMatrix.scale(0.4, 0.4, 0.4);
@@ -566,10 +560,9 @@ function draw(gl) {
   drawCube(gl);
   modelMatrix = popMatrix();
   pushMatrix(modelMatrix);
-  // spinning  dodecahedron;
+  // draw spinning  dodecahedron;
   modelMatrix.setTranslate(0.42, 0.4, 0.5); 
   
-  //modelMatrix.rotate(180, 1, 1, 0); // Rotate around the y-axis
     // Let mouse-drag move the drawing axes before we do any other drawing:
   quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
   modelMatrix.concat(quatMatrix); // apply that matrix.
@@ -581,7 +574,7 @@ function draw(gl) {
 
   pushMatrix(modelMatrix); 
 
-//draw hearts
+//draw joint hearts
   modelMatrix.setTranslate(1.5, -0.6, 0.0);
 
    pushMatrix(modelMatrix); 
