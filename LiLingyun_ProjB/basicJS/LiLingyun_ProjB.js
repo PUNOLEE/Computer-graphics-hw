@@ -272,17 +272,11 @@ function dragQuat(xdrag, ydrag) {
 function keydown(ev, gl) {// Called when user hits any key button;
     
   if(ev.keyCode == 39) { // right arrow - step right
-    up = new Vector3();
-    up[0] = 0;
-    up[1] = 1;
-    up[2] = 0;
-    look = new Vector3();
-    look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-
-    tmpVec3 = new Vector3();
-    tmpVec3 = vec3CrossProduct(up, look);
-
-    //console.log(tmpVec3[0], tmpVec3[1], tmpVec3[2]);
+    up = [0,1,0]
+    look = genelookat(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+    console.log(look)
+    
+    tmpVec3 = normal(cross(up,look))
 
     g_EyeX -= MOVE_STEP * tmpVec3[0];
     g_EyeY -= MOVE_STEP * tmpVec3[1];
@@ -296,17 +290,10 @@ function keydown(ev, gl) {// Called when user hits any key button;
 } 
 else 
 if (ev.keyCode == 37) { // left arrow - step left
-    up = new Vector3();
-    up[0] = 0;
-    up[1] = 1;
-    up[2] = 0;
-    look = new Vector3();
-    look = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+    up = [0,1,0]
+    look = genelookat(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
 
-    tmpVec3 = new Vector3();
-    tmpVec3 = vec3CrossProduct(up, look);
-
-    //console.log(tmpVec3[0], tmpVec3[1], tmpVec3[2]);
+    tmpVec3 = normal(cross(up,look))
 
     g_EyeX += MOVE_STEP * tmpVec3[0];
     g_EyeY += MOVE_STEP * tmpVec3[1];
@@ -320,10 +307,8 @@ if (ev.keyCode == 37) { // left arrow - step left
 } 
 else 
 if (ev.keyCode == 38) { // up arrow - step forward
+    tmpVec3 = genelookat(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
 
-    tmpVec3 = new Vector3();
-    tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-    
     g_EyeX += MOVE_STEP * tmpVec3[0];
     g_EyeY += MOVE_STEP * tmpVec3[1];
     g_EyeZ += MOVE_STEP * tmpVec3[2];
@@ -337,9 +322,8 @@ if (ev.keyCode == 38) { // up arrow - step forward
 } 
 else 
 if (ev.keyCode == 40) { // down arrow - step backward
-    tmpVec3 = new Vector3();
-    tmpVec3 = vec3FromEye2LookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
-    
+    tmpVec3 = genelookat(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
+
     g_EyeX -= MOVE_STEP * tmpVec3[0];
     g_EyeY -= MOVE_STEP * tmpVec3[1];
     g_EyeZ -= MOVE_STEP * tmpVec3[2];
@@ -354,16 +338,16 @@ else
 if (ev.keyCode == 65){ // a - look left
   if(LAST_UPDATE==-1 || LAST_UPDATE==0)
     {
-      a = g_LookAtX - g_EyeX;
-      b = g_LookAtY - g_EyeY;
-      c = g_LookAtZ - g_EyeZ;
-      l = Math.sqrt(a*a + b*b + c*c);
+      let eV = [g_EyeX,g_EyeY,g_EyeZ];
+      let lV = [g_LookAtX, g_LookAtY, g_LookAtZ];
+      r = subtract(lV,eV);
       
-      lzx = Math.sqrt(a*a+c*c);
+      l = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+      
+      lzx =  Math.sqrt(r[0]*r[0] + r[2]*r[2]);
       sin_phi = lzx / l;
 
-      theta0 = Math.PI -  Math.asin(a/lzx);
-
+      theta0 = Math.PI -  Math.asin(r[0]/lzx);
       THETA_NOW = theta0 + LOOK_STEP;
       
       LAST_UPDATE = 1;
@@ -373,7 +357,7 @@ if (ev.keyCode == 65){ // a - look left
       THETA_NOW += LOOK_STEP;
     }
 
-    g_LookAtY = b + g_EyeY;
+    g_LookAtY = r[1] + g_EyeY;
     g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
     g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
 }
@@ -381,15 +365,16 @@ else
   if(ev.keyCode==68){//d - look right
     if (LAST_UPDATE==-1 || LAST_UPDATE==0)
     {
-      a = g_LookAtX - g_EyeX;
-      b = g_LookAtY - g_EyeY;
-      c = g_LookAtZ - g_EyeZ;
-      l = Math.sqrt(a*a + b*b + c*c);
-      lzx = Math.sqrt(a*a+c*c);
+      let eV = [g_EyeX,g_EyeY,g_EyeZ];
+      let lV = [g_LookAtX, g_LookAtY, g_LookAtZ];
+      r = subtract(lV,eV);
+      
+      l = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+      
+      lzx =  Math.sqrt(r[0]*r[0] + r[2]*r[2]);
       sin_phi = lzx / l;
 
-      theta0 = Math.PI -  Math.asin(a/lzx);
-
+      theta0 = Math.PI -  Math.asin(r[0]/lzx);
       THETA_NOW = theta0 - LOOK_STEP;
       
       LAST_UPDATE = 1;
@@ -399,7 +384,7 @@ else
       THETA_NOW -= LOOK_STEP;
     }
 
-    g_LookAtY = b + g_EyeY;
+    g_LookAtY = r[1] + g_EyeY;
     g_LookAtX = l * sin_phi * Math.sin(THETA_NOW) + g_EyeX;
     g_LookAtZ = l * sin_phi * Math.cos(THETA_NOW) + g_EyeZ;
   }
@@ -407,14 +392,18 @@ else
   if(ev.keyCode==87){ //w - look up
     if (LAST_UPDATE==-1 || LAST_UPDATE==1)
     {  
-      a = g_LookAtX - g_EyeX;
-      b = g_LookAtY - g_EyeY;
-      c = g_LookAtZ - g_EyeZ;
-      l = Math.sqrt(a*a + b*b + c*c);
-      cos_theta = c / Math.sqrt(a*a + c*c);
-      sin_theta = a / Math.sqrt(a*a + c*c);
+      let eV = [g_EyeX,g_EyeY,g_EyeZ];
+      let lV = [g_LookAtX, g_LookAtY, g_LookAtZ];
+      r = subtract(lV,eV);
 
-      phi0 = Math.asin(b/l);
+      l = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+      
+      lzx =  Math.sqrt(r[0]*r[0] + r[2]*r[2]);
+
+      cos_theta = r[2] /lzx;
+      sin_theta = r[0] /lzx;
+
+      phi0 = Math.asin(r[1]/l);
 
       PHI_NOW = phi0 + LOOK_STEP;
       LAST_UPDATE = 0;
@@ -432,15 +421,18 @@ else
   if(ev.keyCode==83){ //s-look down
     if(LAST_UPDATE==-1 || LAST_UPDATE==1)
     { 
-      a = g_LookAtX - g_EyeX;
-      b = g_LookAtY - g_EyeY;
-      c = g_LookAtZ - g_EyeZ;
-      l = Math.sqrt(a*a + b*b + c*c);
+      let eV = [g_EyeX,g_EyeY,g_EyeZ];
+      let lV = [g_LookAtX, g_LookAtY, g_LookAtZ];
+      r = subtract(lV,eV);
+      
+      l = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+      
+      lzx =  Math.sqrt(r[0]*r[0] + r[2]*r[2]);
 
-      cos_theta = c / Math.sqrt(a*a + c*c);
-      sin_theta = a / Math.sqrt(a*a + c*c);
+      cos_theta = r[2] /lzx;
+      sin_theta = r[0] /lzx;
 
-      phi0 = Math.asin(b/l);
+      phi0 = Math.asin(r[1]/l);
 
       PHI_NOW = phi0 - LOOK_STEP;
       
@@ -458,38 +450,42 @@ else
   }
 }
 
-function vec3FromEye2LookAt(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ)
-{
-  result = new Vector3();
-  
-  dx = lookAtX - eyeX;
-  dy = lookAtY - eyeY;
-  dz = lookAtZ - eyeZ;
-  amp = Math.sqrt(dx*dx + dy*dy + dz*dz);
+function genelookat(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ){
 
-  result[0] = dx/amp;
-  result[1] = dy/amp;
-  result[2] = dz/amp;
+  eyeV = [eyeX, eyeY, eyeZ];
+  lookV = [lookAtX, lookAtY, lookAtZ]
 
-  return result;
+  r = subtract(lookV,eyeV);
+
+  len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2])
+
+  return [r[0]/len, r[1]/len, r[2]/len];
 }
 
-function vec3CrossProduct(up, look) //UpVec x LookVec --> Left Vec
+function subtract(a, b){
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function cross(a,b)
+{
+  return [a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0]];
+}
+
+function normal(crossV)
 {
   r = new Vector3();
 
-  r[0] = up[1]*look[2] - up[2]*look[1];
-  r[1] = up[2]*look[0] - up[0]*look[2];
-  r[2] = up[0]*look[1] - up[1]*look[0];
+  var len = Math.sqrt(crossV[0]*crossV[0] + crossV[1]*crossV[1] + crossV[2]*crossV[2]) + 0.000001;
 
-  amp = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001;
-
-  r[0] /= amp;
-  r[1] /= amp;
-  r[2] /= amp;
+  r[0] = crossV[0]/len;
+  r[1] = crossV[1]/len;
+  r[2] = crossV[2]/len;
 
   return r;
 }
+
 
 
 function drawView(gl){
