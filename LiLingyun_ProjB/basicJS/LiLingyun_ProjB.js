@@ -41,12 +41,12 @@ var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
-  this.left = 0.0;
-  this.right = 0.0;
-  this.bottom = 0.0;
-  this.up = 0.0;
-  this.near = 1.0;
-  this.far = 100.0;
+  // this.left = 0.0;
+  // this.right = 0.0;
+  // this.bottom = 0.0;
+  // this.up = 0.0;
+  // this.near = 1.0;
+  // this.far = 100.0;
 };
 
 
@@ -60,14 +60,14 @@ window.onload = function() {
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
 
-  var f2 = gui.addFolder('Frustum parameters');
-  f2.add(text, 'left').onChange(setLeft);
+  // var f2 = gui.addFolder('Frustum parameters');
+  // f2.add(text, 'left').onChange(setLeft);
   // f2.add(text, 'right').onChange(setRight);
   // f2.add(text, 'bottom').onChange(setBottom);  
   // f2.add(text, 'up').onChange(setUp);
   // f2.add(text, 'near').onChange(setNear);
   // f2.add(text, 'far').onChange(setFar);
-  f2.open();
+  // f2.open();
 
 };
 
