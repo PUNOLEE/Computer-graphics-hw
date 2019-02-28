@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project C</title>
+  </head>
+
+  <body onresize="resize()" style="background-color:#404059;display: flex;flex-direction: column;">
+    <canvas id="webgl" >
+      <! Canvas size in pixels -->
+      Please use a browser that supports HTML-5 "canvas"
+    </canvas>
+
+    <div style="text-align: center; color:white">
+      <br>
+      Open Console, please: (right-click-->'Inspect Element'-->'Console' tab
+      <!-- <br>
+      Use DAT GUI controls! 
+      <br> -->
+      Try drag the dodecahedron <BR />
+      Current Quaternion: w + xi + yj + zk where (i,j,k) are 3-way imaginary numbers:
+      <div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. <br> length=1. </div>
+      
+      Hit ^ v < > to step forward backward left right<BR /> Hit A D W S to look left right up down<BR />
+    </div>
+
+    <! Load webGL-supplied libraries  >
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <! Load our textbook-supplied libraries>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix-quat03.js"></script>
+
+    <! Load OUR 3D graphics drawing program: lib1 by Vincent Bommier, 2018>
+    <script src="lib1.js"></script>
+    <! to simplify drawing colorful triangles in 3D>
+
+    <script src="LiLingyun_ProjC.js"></script>
+    <! OUR program >
+    <script type="text/javascript" src="../lib/dat.gui.min.js"></script>
+    <!DAT.GUI>
+
+  </body>
+</html>
