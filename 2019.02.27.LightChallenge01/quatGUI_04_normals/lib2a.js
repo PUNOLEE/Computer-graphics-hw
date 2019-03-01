@@ -139,7 +139,7 @@ function init(){
   //set the light color --> (1.0, 1.0, 1.0)
   gl.uniform3f(u_LightColorLoc, 1.0, 1.0, 1.0);    //modified for better visual effect
   //set the light position --> "overhead" --> y=10.0
-  gl.uniform3f(u_LightPositionLoc, 10.0, 10.0, 10.0); //modified for better visual effect
+  gl.uniform3f(u_LightPositionLoc, -10.0, -10.0, -10.0); //modified for better visual effect
   //set the ambient light color --> (0.3, 0.3, 0.3)
   gl.uniform3f(u_AmbientLightColorLoc, 0.3, 0.3, 0.3);
 

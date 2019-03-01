@@ -42,7 +42,7 @@ var g_canvas = document.getElementById('webgl');
 var g_myMatrix = new Matrix4();   
                   // 4x4 matrix we send to the GPU where it transforms vertices
 var g_tmpMatrix = new Matrix4();  // used in drawAll() fcn for mouse-drag..
-
+var g_normalMatrix = new Matrix4();
 var g_digits = 5; // # of digits printed on-screen (e.g. x.toFixed(g_digits);
 
 //------------For mouse click-and-drag: -------------------------------
@@ -372,7 +372,13 @@ function append_Wedge() {
                      0.0,  1.0, 0.0, 1.0,  // node 2
                      0.0,	 0.0, sq2, 1.0,  // node 0
                     -c30, -0.5, 0.0, 1.0,  // node 3
-  ]);
+	]);
+	appendNormals([0,0,1,
+		0,0,1,
+		0,0,1,
+		0, -1, 0,
+		0, -1, 0,
+		0, -1, 0]);
   appendColors([  1.0, 1.0, 1.0, 1.0, // n0 white
                   0.0, 1.0, 0.0, 1.0, // n3 green
                   0.0, 0.0, 1.0, 1.0, // n1 blue
@@ -389,7 +395,11 @@ function drawHalfWedge() {
 // base is in z=0 plane centered at origin: apex on z axis.
 
   pushMatrix(g_myMatrix);  // SAVE the given myMatrix contents, then:
-    updateModelMatrix(g_myMatrix);        // send it to GPU
+		updateModelMatrix(g_myMatrix);        // send it to GPU
+		g_normalMatrix.setInverseOf(g_myMatrix);
+    g_normalMatrix.transpose();
+		updateNormalMatrix(g_normalMatrix);
+		gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4); // DRAW 2 triangles.
   g_myMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
@@ -399,7 +409,11 @@ function drawFullWedge() {
 // Draw all 4 triangles of our tetrahedron
 // base is in z=0 plane centered at origin; apex on z axis.
   pushMatrix(g_myMatrix);  // SAVE the given myMatrix contents, then:
-    updateModelMatrix(g_myMatrix);        // send it to GPU
+		updateModelMatrix(g_myMatrix);        // send it to GPU
+		g_normalMatrix.setInverseOf(g_myMatrix);
+    g_normalMatrix.transpose();
+		updateNormalMatrix(g_normalMatrix);
+		gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,6); // DRAW 4 triangles.
   g_myMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
@@ -414,7 +428,13 @@ function append_Axes() {
                    0.0, 0.0, 0.0, 1.0,      // y axis
                    0.0, 1.0, 0.0, 1.0,
                    0.0, 0.0, 0.0, 1.0,      // z axis
-                   0.0, 0.0, 1.0, 1.0, ]);
+									 0.0, 0.0, 1.0, 1.0, ]);
+	appendNormals([1, 0, 0,
+									1, 0, 0,
+									0, 0, -1,
+									0, 0, -1,
+									0, 1, 0,
+									0, 1, 0]);
   appendColors([1.0, 0.2, 0.2, 1.0,   // bright red
                 1.0, 0.2, 0.2, 1.0,
                 0.2, 1.0, 0.2, 1.0,   // bright green
@@ -426,7 +446,11 @@ function append_Axes() {
 function drawAxes() {
 //-----------------------------------------------------------------------------
 // using current drawing axes
-  updateModelMatrix(g_myMatrix);
+	updateModelMatrix(g_myMatrix);
+	g_normalMatrix.setInverseOf(g_myMatrix);
+  g_normalMatrix.transpose();
+	updateNormalMatrix(g_normalMatrix);
+	gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
   gl.drawArrays(gl.LINES,6,6);   // 2nd set of 6 verts in GPU.
 }
 
@@ -444,6 +468,7 @@ function append_GroundGrid() {
 	// (# of horiz. lines (xcount) + # of vert. lines (ycount).
 	gndVerts = new Float32Array(4*2*(xcount+ycount));   // x,y,z,w 
 	gndColors = new Float32Array(4*2*(xcount+ycount));  // r,g,b,a
+	gndNormals = new Float32Array(3*2*(xcount+ycount));
 	var xgap = xymax/(xcount-1);		// HALF-spacing between lines in x,y;
 	var ygap = xymax/(ycount-1);		// (why half? because v==(line number/2))
 	// line colors:
@@ -468,6 +493,9 @@ function append_GroundGrid() {
 		gndColors[j+1] = xColr[1];
 		gndColors[j+2] = xColr[2];
 		gndColors[j+3] = 1.0;
+		gndNormals[j] = 0;  //dx
+    gndNormals[j+1] = 0;  //dy
+    gndNormals[j+2] = 1;  //dz
 	}
 	// Second, step thru y values as we make horizontal lines of constant-y:
 	// (don't re-initialize j--we're adding more vertices to the array)
@@ -488,8 +516,12 @@ function append_GroundGrid() {
 		gndColors[j+1] = yColr[1];
 		gndColors[j+2] = yColr[2];
 		gndColors[j+3] = 1.0;
+		gndNormals[j] = 0;  //dx
+    gndNormals[j+1] = 0;  //dy
+    gndNormals[j+2] = 1;  //dz
 	}
 	appendPositions(gndVerts);     // SEND to GPU (via lib1.js functions)
+	appendColors(gndColors);
 	appendColors(gndColors);
 }
 
@@ -497,7 +529,11 @@ function drawGroundGrid() {
 //==============================================================================
 // using current drawing axes.
 // using current drawing axes
-//  updateModelMatrix(g_myMatrix);
+	updateModelMatrix(g_myMatrix);
+	g_normalMatrix.setInverseOf(g_myMatrix);
+  g_normalMatrix.transpose();
+	updateNormalMatrix(g_normalMatrix);
+	gl.uniform4f(u_ColorModLoc, 0, 0, 0, 1);
   gl.drawArrays(gl.LINES, 12, 2*200); // 2 verts/line; 200 lines 
   
 }
