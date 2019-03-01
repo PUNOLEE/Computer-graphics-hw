@@ -373,12 +373,12 @@ function append_Wedge() {
                      0.0,	 0.0, sq2, 1.0,  // node 0
                     -c30, -0.5, 0.0, 1.0,  // node 3
 	]);
-	appendNormals([0,0,1,
-		0,0,1,
-		0,0,1,
-		0, -1, 0,
-		0, -1, 0,
-		0, -1, 0]);
+	appendNormals([ 0,0,1,
+									0,0,1,
+									0,0,1,
+									1, 0, 0,
+									0, -1, 0,
+									0, -1, 0]);
   appendColors([  1.0, 1.0, 1.0, 1.0, // n0 white
                   0.0, 1.0, 0.0, 1.0, // n3 green
                   0.0, 0.0, 1.0, 1.0, // n1 blue
@@ -399,7 +399,6 @@ function drawHalfWedge() {
 		g_normalMatrix.setInverseOf(g_myMatrix);
     g_normalMatrix.transpose();
 		updateNormalMatrix(g_normalMatrix);
-		gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4); // DRAW 2 triangles.
   g_myMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
@@ -413,7 +412,6 @@ function drawFullWedge() {
 		g_normalMatrix.setInverseOf(g_myMatrix);
     g_normalMatrix.transpose();
 		updateNormalMatrix(g_normalMatrix);
-		gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,6); // DRAW 4 triangles.
   g_myMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
@@ -450,7 +448,6 @@ function drawAxes() {
 	g_normalMatrix.setInverseOf(g_myMatrix);
   g_normalMatrix.transpose();
 	updateNormalMatrix(g_normalMatrix);
-	gl.uniform4f(u_ColorModLoc, 1, 0.5, 0.5, 1);
   gl.drawArrays(gl.LINES,6,6);   // 2nd set of 6 verts in GPU.
 }
 
@@ -533,7 +530,6 @@ function drawGroundGrid() {
 	g_normalMatrix.setInverseOf(g_myMatrix);
   g_normalMatrix.transpose();
 	updateNormalMatrix(g_normalMatrix);
-	gl.uniform4f(u_ColorModLoc, 0, 0, 0, 1);
   gl.drawArrays(gl.LINES, 12, 2*200); // 2 verts/line; 200 lines 
   
 }

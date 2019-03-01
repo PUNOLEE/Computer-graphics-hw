@@ -19,17 +19,17 @@ var VSHADER_SOURCE =
   'attribute vec4 a_Color;\n' +             // r,g,b,a for this vertex
   'attribute vec4 a_Normal;\n' +  //surface normal vector
   'attribute float a_PointSize;\n' +        // size in pixels for this vertex
-
+  'uniform vec4 u_Color;' +
   'uniform mat4 u_ModelMatrix;\n' +  
   'uniform mat4 u_NormalMatrix;\n' +  //transformation matrix of the normal vector       
-  'varying vec3 v_Position;\n' +
   'varying vec4 v_Color;\n' +
   'varying vec3 v_Normal;\n' +
+  'varying vec3 v_Position;\n' +
   'void main() {\n' +
   '  gl_Position = u_ModelMatrix * a_Position;\n' + // OUTPUT: vertex screen position
   '  v_Position = vec3(u_ModelMatrix * a_Position);\n' +
   '  v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));\n' +
-  '  v_Color = a_Color;\n' +
+  '  v_Color = a_Color + u_Color;\n' +
   '  gl_PointSize = a_PointSize;\n' +       // OUTPUT:  POINTS drawing prim size 
                                             // (in pixels) for this vertex
   '}\n';
@@ -40,22 +40,17 @@ var FSHADER_SOURCE =
   'precision mediump float;\n' +
   '#endif\n' +
 
-  'uniform vec3 u_LightColor;\n' +          //light color
   'uniform vec3 u_LightPosition;\n' +       //position of the light source
-  'uniform vec3 u_AmbientLightColor;\n' +   //ambient light color
-  'uniform vec4 u_ColorMod;\n' +            //color modifier
 
   'varying vec4 v_Color;\n' +
   'varying vec3 v_Normal;\n' +
-  'varying vec3 v_Position;\n' + 
+  'varying vec3 v_Position;\n' +
   'void main() {\n' +
  '  vec3 normal = normalize(v_Normal);\n' +
  '  vec3 lightDirection = normalize(u_LightPosition-v_Position);\n' +
- '  float nDotL = max(dot(lightDirection, normal), 0.0);\n' +  //clamped value
- '  vec4 modColor = v_Color + u_ColorMod;\n' +
- '  vec3 diffuse = u_LightColor * modColor.rgb * nDotL;\n' +
- '  vec3 ambient = u_AmbientLightColor * modColor.rgb;\n' + 
- '  gl_FragColor = vec4(diffuse+ambient, modColor.a);\n' +
+ '  float light = max(dot(lightDirection, normal), 0.0);\n' +  //clamped value
+ '  gl_FragColor = v_Color;\n' +
+ '  gl_FragColor.rgb *= light;\n' +
   '}\n';
   
 //=============================================================================
@@ -83,7 +78,7 @@ var ipointSizes = 0;    // total # of 'pointSize' attributes we will send to GPU
 var u_ModelMatrixLoc;   // GPU location# for our 'modelMatrix' uniform var.
 var modelMatrix = new Matrix4();  // Javascript 4x4 matrix; send contents to GPU.
 var u_NormalMatrixLoc;
-var u_ColorModLoc;
+var u_ColorLoc;
 //===============
 //
 //  USER FUNCTIONS -- call these!
@@ -125,23 +120,17 @@ function init(){
   // Get the GPU location for all 'uniform' variables we will update on GPU:
   u_ModelMatrixLoc = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
   u_NormalMatrixLoc = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
-  var u_LightColorLoc = gl.getUniformLocation(gl.program, 'u_LightColor');
   var u_LightPositionLoc = gl.getUniformLocation(gl.program, 'u_LightPosition');
-  var u_AmbientLightColorLoc = gl.getUniformLocation(gl.program, 'u_AmbientLightColor');
-  u_ColorModLoc = gl.getUniformLocation(gl.program, 'u_ColorMod');
+  u_ColorLoc = gl.getUniformLocation(gl.program, 'u_Color');
     
-  if (!u_ModelMatrixLoc || !u_NormalMatrixLoc || !u_LightColorLoc || !u_LightPositionLoc || !u_AmbientLightColorLoc || !u_ColorModLoc) {
+  if (!u_ModelMatrixLoc || !u_NormalMatrixLoc || !u_LightPositionLoc || !u_ColorLoc) {
     console.log('lib2a.js: init failed to get the storage location');
     return;
   }
 
-  //world coordinate system
-  //set the light color --> (1.0, 1.0, 1.0)
-  gl.uniform3f(u_LightColorLoc, 1.0, 1.0, 1.0);    //modified for better visual effect
+  gl.uniform4f(u_ColorLoc, 1, 0.5, 0.5, 1);    //light 
   //set the light position --> "overhead" --> y=10.0
-  gl.uniform3f(u_LightPositionLoc, -10.0, -10.0, -10.0); //modified for better visual effect
-  //set the ambient light color --> (0.3, 0.3, 0.3)
-  gl.uniform3f(u_AmbientLightColorLoc, 0.3, 0.3, 0.3);
+  gl.uniform3f(u_LightPositionLoc, 10.0, 10.0, -10.0); //modified for better visual effect
 
   return gl;
 }
