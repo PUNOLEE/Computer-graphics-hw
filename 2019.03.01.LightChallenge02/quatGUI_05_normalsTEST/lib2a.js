@@ -18,7 +18,6 @@ var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'attribute vec4 a_Color;\n' +
   'attribute vec4 a_Normal;\n' +  //surface normal vector
-  'attribute float a_PointSize;\n' + 
   'uniform mat4 u_ModelMatrix;\n' +
   'uniform mat4 u_NormalMatrix;\n' +  //transformation matrix of the normal vector
 
@@ -29,7 +28,7 @@ var VSHADER_SOURCE =
   '  gl_Position = u_ModelMatrix * a_Position;\n' +
   '  v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));\n' +
   '  v_Color = a_Color;\n' +
-  '  gl_PointSize = a_PointSize;\n' +
+  '  gl_PointSize = 1.0;\n' +
   '}\n';
 
 // Fragment shader program----------------------------------
@@ -233,7 +232,7 @@ function _Float32Edit(base, edit, startIdx) { //-------------------------------
 function _AssembleVBO(){ //------------------------------------------------------
 //Concatenate all attributes into a single array that will fill VBO in the GPU.
   //console.log(positions,colors,normals)
-  return _Float32Concat(normals,_Float32Concat(positions,_Float32Concat(colors,pointSizes)));
+  return _Float32Concat(positions,_Float32Concat(colors,normals));
 }
 
 function _BufferSetup(gl) {//--------------------------------------------------
@@ -272,11 +271,11 @@ function _BufferSetup(gl) {//--------------------------------------------------
     console.log('Failed to get the storage location of a_Normal');
     return -1;
   }
-  var a_PointSizeLoc = gl.getAttribLocation(gl.program, 'a_PointSize');
-  if(a_PointSizeLoc < 0) {
-    console.log("Failed to find GPU location of our shader's a_PointSize var");
-    return -1;
-  }
+  // var a_PointSizeLoc = gl.getAttribLocation(gl.program, 'a_PointSize');
+  // if(a_PointSizeLoc < 0) {
+  //   console.log("Failed to find GPU location of our shader's a_PointSize var");
+  //   return -1;
+  // }
   //The VBOcontents array holds attribute values arranged like this:
   //[x0,y0,z0,w0,...,x1023,y1023,z1023,w1023,    // position attribs for all verts
   // r0,g0,b0,a0,...,r1023,g1023,b1023,a1023,    // color attribs for all verts
@@ -287,11 +286,7 @@ function _BufferSetup(gl) {//--------------------------------------------------
   // 'a_position' attribute:---------------------------------------------------
   var offset = 0;           // # of bytes offset from start of VBOcontents to 
                             // the first value stored for a given attribute.
-  gl.vertexAttribPointer(
-    a_NormalLoc, normalDimensions, gl.FLOAT, false, FSIZE*3, 0);
-  gl.enableVertexAttribArray(a_NormalLoc);
-
-  offset += FSIZE*numVertices*normalDimensions;
+  
   var stride = FSIZE*positionDimensions;  // # bytes to skip to reach next vert.
   gl.vertexAttribPointer(         // Specify how attribute accesses VBO memory:
       a_PositionLoc, // location of this attribute in your GLSL shader program
@@ -318,11 +313,15 @@ function _BufferSetup(gl) {//--------------------------------------------------
   // 'a_pointSize' attribute:--------------------------------------------------
   offset += FSIZE*numVertices*colorDimensions;  // shift offset from start of
         // 'color' values to the start of 'pointSize' values stored in VBO.
-  stride = FSIZE*pointSizeDimensions; // # bytes to skip to reach next vertex.
-  gl.vertexAttribPointer(             // Set how attribute accesses VBO memory:
-      a_PointSizeLoc, pointSizeDimensions, gl.FLOAT, false, stride, offset);
-  gl.enableVertexAttribArray(a_PointSizeLoc);  // Enable access to the bound VBO.
-  
+  // stride = FSIZE*pointSizeDimensions; // # bytes to skip to reach next vertex.
+  // gl.vertexAttribPointer(             // Set how attribute accesses VBO memory:
+  //     a_PointSizeLoc, pointSizeDimensions, gl.FLOAT, false, stride, offset);
+  // gl.enableVertexAttribArray(a_PointSizeLoc);  // Enable access to the bound VBO.
+  stride = FSIZE*normalDimensions;
+  gl.vertexAttribPointer(
+    a_NormalLoc, normalDimensions, gl.FLOAT, false, FSIZE*3, offset);
+  gl.enableVertexAttribArray(a_NormalLoc);
+
   
 
 }
