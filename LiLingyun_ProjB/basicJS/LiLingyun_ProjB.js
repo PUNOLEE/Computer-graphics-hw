@@ -26,7 +26,7 @@ var PHI_NOW = 0;
 var THETA_NOW = 0;
 var LAST_UPDATE = -1;
 
-var g_EyeX = 0.30, g_EyeY = 0.30, g_EyeZ = 4.0; // Eye position
+var g_EyeX = 6.0, g_EyeY = 0.0, g_EyeZ = 0.0; // Eye position
 var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;// look-at point z-coordinate
 
 var projMatrix = new Matrix4();
@@ -525,6 +525,7 @@ function draw(gl) {
   // draw ground axes
   drawAxes(gl);
   modelMatrix = popMatrix(); 
+  console.log(modelMatrix.printMe())
   pushMatrix(modelMatrix); 
 
   // draw tetrahedron 

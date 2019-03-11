@@ -19,20 +19,26 @@ var currentColor = 0.0;
 var heartSizeStep = 0.1;
 var text;
 var floatsPerVertex = 4;
-
 var MOVE_STEP = 0.15;
 var LOOK_STEP = 0.02;
 var PHI_NOW = 0;
 var THETA_NOW = 0;
 var LAST_UPDATE = -1;
-
-var g_EyeX = 0.30, g_EyeY = 0.30, g_EyeZ = 4.0; // Eye position
+var g_EyeX = 20.00,
+    g_EyeY = 0.20,
+    g_EyeZ = 2.00;
+//var g_EyeX = 0.30, g_EyeY = 0.30, g_EyeZ = 4.0; // Eye position
 var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;// look-at point z-coordinate
+var g_LambAtX = 5.0, g_LambAtY = 5.0, g_LambAtZ = 20.0;
+var lampAmbiR = 1.0, lampAmbiG = 1.0, lampAmbiB = 1.0;
+var lampDiffR = 1.0, lampDiffG = 1.0, lampDiffB = 1.0;
+var lampSpecR = 1.0, lampSpecG = 1.0, lampSpecB = 1.0;
+var lampOn = true; var headLightOn = true;
 
-var projMatrix = new Matrix4();
+var mat_sphere = 1;
 var viewMatrix = new Matrix4();
+var projMatrix = new Matrix4();
 var mvpMatrix = new Matrix4();
-
 var quatMatrix = new Matrix4();   // rotation matrix, made from latest qTot
 var qNew = new Quaternion(0,0,0,1); // most-recent mouse drag's rotation
 var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
@@ -85,14 +91,15 @@ function main() {
   // (for WebGL framebuffer, not canvas)
 
    
-   makeMess();
-   makeHeart();
+   
+   //makeHeart();
    makeGroundGrid();
-   append_Axes();
-   append_Wedge();
-   makeTorus();
+   //append_Axes();
+   //append_Wedge();
+   //makeTorus();
    makeCube();
-
+   makeSphere();
+   makeMess();
   // onkeydown listener
   window.addEventListener("keydown", (ev)=>keydown(ev, gl), false);
 
@@ -100,7 +107,7 @@ function main() {
   canvas.addEventListener("mousedown", (ev)=>myMouseDown(ev, canvas)); 
  
   // onmousemove listener
-  canvas.addEventListener("mousemove", (ev)=>myMouseMove(ev, canvas)); 
+  canvas.addEventListener("mousemove", (ev)=>myMouseMove(ev,gl, canvas)); 
 
   // onmouseup listener
   canvas.addEventListener("mouseup", (ev)=>myMouseUp(ev, canvas)); 
@@ -162,36 +169,67 @@ function myMouseDown(ev, canvas) {
   
 };
 
-function myMouseMove(ev, canvas) {
-//==============================================================================
-// Called when user MOVES the mouse with a button already pressed down.
-//                  (Which button?   console.log('ev.button='+ev.button);    )
-//    ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-//    pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
-
-  if(isDrag==false) return;     // IGNORE all mouse-moves except 'dragging'
-
-  // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
-  var rect = ev.target.getBoundingClientRect(); // get canvas corners in pixels
-  var xp = ev.clientX - rect.left;                    // x==0 at canvas left edge
-  var yp = canvas.height - (ev.clientY - rect.top); // y==0 at canvas bottom edge
+function myMouseMove(ev, gl, canvas) {
+  //==============================================================================
+  // Called when user MOVES the mouse with a button already pressed down.
+  // 									(Which button?   console.log('ev.button='+ev.button);    )
+  // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+  //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
   
-  // Convert to Canonical View Volume (CVV) coordinates too:
-  var x = (xp - canvas.width/2)  /    // move origin to center of canvas and
-               (canvas.width/2);      // normalize canvas to -1 <= x < +1,
-  var y = (yp - canvas.height/2) /    //                     -1 <= y < +1.
-               (canvas.height/2);
-//  console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
-
-  // find how far we dragged the mouse:
-  myX += (x - xMouseclik);      // Accumulate change-in-mouse-position,&
-  myY += (y - yMouseclik);
-  dragQuat(x - xMouseclik, y - yMouseclik);
-
-  xMouseclik = x;                       // Make next drag-measurement from here.
-  yMouseclik = y;
-};
-
+    if(isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
+  
+    // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+    var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+    var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+    var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+  //  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+    
+    // Convert to Canonical View Volume (CVV) coordinates too:
+    var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                 (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+    var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                 (canvas.height/2);
+  //	console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
+  
+  //Mouse-Drag Moves Lamp0 ========================================================
+    // Use accumulated mouse-dragging to change the global var 'lamp0.I_pos';
+    // (note how accumulated mouse-dragging sets xmDragTot, ymDragTot below:
+    //  use the same method to change the y,z coords of lamp0Pos)
+  
+    console.log('lamp0.I_pos.elements[0] = ', lamp0.I_pos.elements[0], '\n');
+    g_LambAtX = g_LambAtX;
+    g_LambAtY = g_LambAtY + 4.0*(x-xMouseclik);
+    g_LambAtZ = g_LambAtZ + 4.0*(y-yMouseclik);
+    // lamp0.I_pos.elements.set([	
+    //         lamp0.I_pos.elements[0],
+    //         lamp0.I_pos.elements[1] + 4.0*(x-xMouseclik),	// Horiz drag: change world Y
+    //         lamp0.I_pos.elements[2] + 4.0*(y-yMouseclik) 	// Vert. drag: change world Z
+    //                         ]);
+    /* OLD
+    lamp0Pos.set([lamp0Pos[0],										// don't change world x;
+                  lamp0Pos[1] + 4.0*(x - xMclik),		// Horiz drag*4 changes world y
+                  lamp0Pos[2] + 4.0*(y - yMclik)]);	// Vert drag*4 changes world z
+  */ 
+  drawView(gl);				// re-draw the image using this updated uniform's value
+  // REPORT new lamp0 position on-screen
+      // document.getElementById('Mouse').innerHTML=
+      //   'Lamp0 position(x,y,z):\t('+ lamp0.I_pos.elements[0].toFixed(5) +
+      //                         '\t' + lamp0.I_pos.elements[0].toFixed(5) +
+      //                         '\t' + lamp0.I_pos.elements[0].toFixed(5) + ')';	
+    
+  //END=====================================================================
+  
+    // find how far we dragged the mouse:
+    myX += (x - xMouseclik);					// Accumulate change-in-mouse-position,&
+    myY += (y - yMouseclik);
+    xMouseclik = x;													// Make next drag-measurement from here.
+    yMouseclik = y;
+    
+  /*	  // REPORT updated mouse position on-screen
+      document.getElementById('Mouse').innerHTML=
+        'Mouse Drag totals (CVV coords):\t'+xMdragTot+', \t'+yMdragTot;	
+  */
+  };
 function myMouseUp(ev,canvas) {
 //==============================================================================
 // Called when user RELEASES mouse button pressed previously.
@@ -216,7 +254,7 @@ function myMouseUp(ev,canvas) {
   // accumulate any final bit of mouse-dragging we did:
   myX += (x - xMouseclik);
   myY += (y - yMouseclik);
-  dragQuat(x - xMouseclik, y - yMouseclik);
+  //dragQuat(x - xMouseclik, y - yMouseclik);
 
   console.log('myMouseUp: xMdragTot,yMdragTot =',myX,',\t', myY);
 };
@@ -270,8 +308,18 @@ function dragQuat(xdrag, ydrag) {
 
 
 function keydown(ev, gl) {// Called when user hits any key button;
-    
-  if(ev.keyCode == 39) { // right arrow - step right
+  if (ev.keyCode == 32) { // space key
+        lampOn = lampOn ? false : true;
+        console.log("lampOn " + lampOn);
+    } else if (ev.keyCode == 13) { // enter key
+        headLightOn = headLightOn ? false : true;
+        console.log("headLightOn " + headLightOn);
+    } 
+    else if (ev.keyCode == 77) { // m key
+        mat_sphere = (mat_sphere + 1) % 20;
+        console.log("change the material");
+    }
+    else if(ev.keyCode == 39) { // right arrow - step right
     up = [0,1,0]
     look = genelookat(g_EyeX, g_EyeY, g_EyeZ, g_LookAtX, g_LookAtY, g_LookAtZ);
     console.log(look)
@@ -450,177 +498,329 @@ else
   }
 }
 
-function genelookat(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ){
 
-  eyeV = [eyeX, eyeY, eyeZ];
-  lookV = [lookAtX, lookAtY, lookAtZ]
-
-  r = subtract(lookV,eyeV);
-
-  len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2])
-
-  return [r[0]/len, r[1]/len, r[2]/len];
-}
-
-function subtract(a, b){
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-}
-
-function cross(a,b)
-{
-  return [a[1] * b[2] - a[2] * b[1],
-          a[2] * b[0] - a[0] * b[2],
-          a[0] * b[1] - a[1] * b[0]];
-}
-
-function normal(r)
-{
-  var len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001; // prevent divide by 0
-
-  return [r[0]/len,r[1]/len,r[2]/len];
-}
 
 
 
 function drawView(gl){
+ 
+  
+
   gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
-  gl.viewport(0, 0, canvas.width/2, canvas.height);
-  projMatrix.setPerspective(35, (0.5 * canvas.width) / canvas.height, 1, 100);
+   gl.viewport(0, 0, canvas.width, canvas.height);
+  // pushMatrix(modelMatrix); 
+  // modelMatrix.setRotate(90, 0, -1, 0);
+  projMatrix.setPerspective(35, canvas.width / canvas.height, 1, 100);
   viewMatrix.setLookAt(g_EyeX,g_EyeY, g_EyeZ,      // center of projection
     g_LookAtX, g_LookAtY, g_LookAtZ,      // look-at point 
      0,  1,  0);     // 'up' vector
+
+
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
 
+  // Calculate the matrix to transform the normal based on the model matrix
+  gl.uniform1i(uLoc_lightingMode, lightingMode);
+  gl.uniform1i(uLoc_shadingMode, shadingMode);
+
+  eyePosWorld.set([g_EyeX, g_EyeY, g_EyeZ]);
+  gl.uniform3fv(uLoc_eyePosWorld, eyePosWorld); 
+
+   //---------------For the light source(s):
+  gl.uniform3fv(lamp0.u_pos,  lamp0.I_pos.elements.slice(0,3));
+  //     ('slice(0,3) member func returns elements 0,1,2 (x,y,z) ) 
+  gl.uniform3fv(lamp0.u_ambi, lamp0.I_ambi.elements);   // ambient
+  gl.uniform3fv(lamp0.u_diff, lamp0.I_diff.elements);   // diffuse
+  gl.uniform3fv(lamp0.u_spec, lamp0.I_spec.elements);   // Specular
+//  console.log('lamp0.u_pos',lamp0.u_pos,'\n' );
+//  console.log('lamp0.I_diff.elements', lamp0.I_diff.elements, '\n');
+
+  //---------------For the Material object(s):
+  gl.uniform3fv(matl0.uLoc_Ke, matl0.K_emit.slice(0,3));        // Ke emissive
+  gl.uniform3fv(matl0.uLoc_Ka, matl0.K_ambi.slice(0,3));        // Ka ambient
+  gl.uniform3fv(matl0.uLoc_Kd, matl0.K_diff.slice(0,3));        // Kd diffuse
+  gl.uniform3fv(matl0.uLoc_Ks, matl0.K_spec.slice(0,3));        // Ks specular
+  gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl0.K_shiny, 10));     // Kshiny 
+
+  lamp0.I_pos.elements.set([g_LambAtX, g_LambAtY, g_LambAtZ]);
+  if (lampOn) {
+        lamp0.I_ambi.elements.set([lampAmbiR, lampAmbiG, lampAmbiB]);
+        lamp0.I_diff.elements.set([lampDiffR, lampDiffG, lampDiffB]);
+        lamp0.I_spec.elements.set([lampSpecR, lampSpecG, lampSpecB]);
+    } else {
+        lamp0.I_ambi.elements.set([0.0, 0.0, 0.0]);
+        lamp0.I_diff.elements.set([0.0, 0.0, 0.0]);
+        lamp0.I_spec.elements.set([0.0, 0.0, 0.0]);
+    }
+  headLight.I_pos.elements.set([g_EyeX, g_EyeY, g_EyeZ]);
+  if (headLightOn) {
+        headLight.I_ambi.elements.set([1.0, 1.0, 1.0]);
+        headLight.I_diff.elements.set([1.0, 1.0, 1.0]);
+        headLight.I_spec.elements.set([1.0, 1.0, 1.0]);
+    } else {
+        headLight.I_ambi.elements.set([0.0, 0.0, 0.0]);
+        headLight.I_diff.elements.set([0.0, 0.0, 0.0]);
+        headLight.I_spec.elements.set([0.0, 0.0, 0.0]);
+    }
+
+  gl.uniform3fv(lamp0.u_pos, lamp0.I_pos.elements.slice(0, 3));
+  gl.uniform3fv(lamp0.u_ambi, lamp0.I_ambi.elements); // ambient
+  gl.uniform3fv(lamp0.u_diff, lamp0.I_diff.elements); // diffuse
+  gl.uniform3fv(lamp0.u_spec, lamp0.I_spec.elements); // Specular
+  gl.uniform3fv(headLight.u_pos, headLight.I_pos.elements.slice(0, 3));
+  gl.uniform3fv(headLight.u_ambi, headLight.I_ambi.elements); // ambient
+  gl.uniform3fv(headLight.u_diff, headLight.I_diff.elements); // diffuse
+  gl.uniform3fv(headLight.u_spec, headLight.I_spec.elements); // Specular
+  // normalMatrix.setInverseOf(modelMatrix);
+  // normalMatrix.transpose();
+  
+  // pushMatrix(modelMatrix); 
+  // modelMatrix =  popMatrix(); 
   draw(gl);
 
 }
 function draw(gl) {
   // Draw a new on-screen image.
+  gl.useProgram(g_myShader);
   modelMatrix.setIdentity(); 
-  modelMatrix.setTranslate(0.0, 0.0, 0.0);
-  modelMatrix.rotate(70,1,0,0);
+ modelMatrix.setTranslate(0.0, 0.0, 0.0);
+  modelMatrix.rotate(-70,1,0,0);
   // Be sure to clear the screen before re-drawing ...
   //modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
   // draw ground grid
   viewMatrix.rotate(-90.0, 1,0,0); 
-  viewMatrix.translate(0.0, 0.0, -0.6); 
-  viewMatrix.scale(0.6, 0.6,0.6);  
+  //viewMatrix.translate(0.0, 0.0, -0.3); 
+  viewMatrix.scale(3, 3,3);  
  
   drawGround(gl);
-  modelMatrix.setTranslate(0.3,-2,0);
-  // draw ground axes
-  drawAxes(gl);
-  modelMatrix = popMatrix(); 
-  pushMatrix(modelMatrix); 
 
-  // draw tetrahedron 
-  modelMatrix.setTranslate(-1.5,-1,0);
+  modelMatrix = popMatrix(); 
+  
+  modelMatrix.setTranslate(0.7, -1.5, 0.0);
   modelMatrix.rotate(-currentAngle, 0, 0, 1);
-  drawAxes(gl);
-  modelMatrix.scale(0.4, 0.4, 0.4);
-  drawFullWedge(gl);
-  modelMatrix = popMatrix();
-  pushMatrix(modelMatrix);
-  // draw toru
-  modelMatrix.setTranslate(-0.4, -1, 0.2);
-  modelMatrix.scale(1,1,-1);	
   modelMatrix.scale(0.3, 0.3, 0.3);
-  modelMatrix.rotate(currentAngle, 0, 1, 1);
-  drawToru(gl);
-  modelMatrix = popMatrix();
   pushMatrix(modelMatrix);
-  //draw cube
-  modelMatrix.setTranslate(1.5, 1.5, 0.3);
+  drawCube(gl);
+  modelMatrix.translate(0, 0, 1.5);
+  modelMatrix.scale(0.7, 0.7, 0.7);
+  modelMatrix.rotate(currentAngle*2, 0, 0, 1);
+  drawCube(gl);
+  modelMatrix.translate(0, 0, 1.3);
   modelMatrix.scale(0.3, 0.3, 0.3);
-  modelMatrix.rotate(currentAngle, 0, 0, 1);
+  modelMatrix.rotate(currentAngle*3, 0, 0, 1);
   drawCube(gl);
   modelMatrix = popMatrix();
-  pushMatrix(modelMatrix);
-  // draw spinning  dodecahedron;
-  modelMatrix.setTranslate(0.42, 0.4, 0.5); 
   
-    // Let mouse-drag move the drawing axes before we do any other drawing:
-  quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
-  modelMatrix.concat(quatMatrix); // apply that matrix.
-  drawAxes(gl);
-  modelMatrix.scale(0.5,0.5,0.5);
-  drawMess(gl);
+  var matl1 = new Material(mat_sphere);
+  gl.uniform3fv(matl0.uLoc_Ke, matl1.K_emit.slice(0, 3)); // Ke emissive
+  gl.uniform3fv(matl0.uLoc_Ka, matl1.K_ambi.slice(0, 3)); // Ka ambient
+  gl.uniform3fv(matl0.uLoc_Kd, matl1.K_diff.slice(0, 3)); // Kd diffuse
+  gl.uniform3fv(matl0.uLoc_Ks, matl1.K_spec.slice(0, 3)); // Ks specular
+  gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl1.K_shiny, 10)); // Kshiny
+  modelMatrix.setTranslate(0, 0, 0);
+  //modelMatrix.scale(1,1,-1);  
+  modelMatrix.scale(0.5, 0.5, 0.5);
+  modelMatrix.rotate(currentAngle, 0, 0, 1);
+  pushMatrix(modelMatrix);
+  drawSphere(gl);
 
-  modelMatrix = popMatrix(); 
+  modelMatrix = popMatrix();
+ 
+    // modelMatrix.setTranslate(0,2,0);
+//   // draw ground axes
+//   drawAxes(gl);
+// quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
+//   modelMatrix.concat(quatMatrix); // apply that matrix.
+  
+  var matl2 = new Material(6);
+  gl.uniform3fv(matl0.uLoc_Ke, matl2.K_emit.slice(0, 3)); // Ke emissive
+  gl.uniform3fv(matl0.uLoc_Ka, matl2.K_ambi.slice(0, 3)); // Ka ambient
+  gl.uniform3fv(matl0.uLoc_Kd, matl2.K_diff.slice(0, 3)); // Kd diffuse
+  gl.uniform3fv(matl0.uLoc_Ks, matl2.K_spec.slice(0, 3)); // Ks specular
+  gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl2.K_shiny, 10)); // Kshiny
+  modelMatrix.setTranslate(2,0.8,0.3);
+  //modelMatrix.rotate(-currentAngle, 0, 1, 0);
+  //modelMatrix.scale(0.4, 0.4, 0.4);
+  // spinning BASE dodecahedron;
+ var base = 0.15;
+  modelMatrix.translate(0.42, 0.4, 0.0); 
+
+  modelMatrix.rotate(currentAngle, 0, 1, 0); // Rotate around the y-axis
+  
+  drawMess(gl, base);
 
   pushMatrix(modelMatrix); 
+  // Rocking 2nd dodecahedron:-----------------------------------
+  // larger one -- top of the base dodecahedron
+  var two = 0.2;
 
-//draw joint hearts
-  modelMatrix.setTranslate(1.5, -0.6, 0.0);
+  modelMatrix.translate(0.2, 0.18, 0.14); // move drawing axes to base dodecahedron's 
+                         // point: use this as the base dodecahedron's 'hinge point'
+                         // and make 'rocking' drawing axes pivot around it.
+  modelMatrix.rotate(90-currentAngle, 1, 1, 0); // 'rock' the drawing axes,
 
-   pushMatrix(modelMatrix); 
-// Rocking the heart-shaped dish:-----------------------------------
-  //on the bottom of to the 2nd hollow heart
-   var sizeSecond = 0.3;
+  drawMess(gl, two);
+ // END of Rocking 2nd dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
 
-   modelMatrix.translate(-0.5, -0.48, 0.2); 
-   modelMatrix.rotate(-180, 1, 0, 0); // Rotate -300 around the x-axis
-   modelMatrix.rotate(currentAngle, 0, 0, -1); // Rotate around the z-axis
+  pushMatrix(modelMatrix); 
+// Rocking 3rd dodecahedron:-----------------------------------
+  // larger one -- bottom of the base dodecahedron
+  modelMatrix.translate(-0.16, -0.18, 0.14); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 1, 1, 0); // Rotate around the x & y-axis
+
+  drawMess(gl, two);
+ // END of Rocking 3rd dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 4th dodecahedron:-----------------------------------
+  // small one -- next to the 3rd dodecahedron
+  modelMatrix.translate(-0.2, -0.48, 0.14);
+  modelMatrix.rotate(-cAngle2, 1, 0, 1); // Rotate around the x & z-axis
+
+  drawMess(gl, base);
+ // END of Rocking 4th dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 5th object- a heart:-----------------------------------
+  // small one heart -- next to the 2nd dodecahedron
+  modelMatrix.translate(0.48, 0.1, 0.2);
+  modelMatrix.rotate(-55, 0, 1, 1); // Rotate -55 around the y & z-axis
+  modelMatrix.scale(0.7, 0.7, 0.7); // SHRINK axes by 70% for the heart,
+
+  drawMess(gl,two);
+ // END of Rocking the heart:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 5th dodecahedron:-----------------------------------
+  // larger one -- next to the 4th dodecahedron
+  modelMatrix.translate(0.06, -0.6, 0.24); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
+
+  drawMess(gl, two);
+ // END of Rocking 5th dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking 6th dodecahedron:-----------------------------------
+  // larger one -- next to the 5th dodecahedron
+  modelMatrix.translate(0.37, -0.5, 0.24);
+  modelMatrix.rotate(-cAngle2, 1, 0, 0);// Rotate around the x-axis
+
+  drawMess(gl, base);
+// END of Rocking 6th dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+
+  pushMatrix(modelMatrix); 
+// Rocking the last dodecahedron:-----------------------------------
+  // larger one -- next to the 6th dodecahedron and the heart
+  modelMatrix.translate(0.5, -0.2, 0.24); 
+  modelMatrix.rotate(150.0 + 70-currentAngle, 0, 0, 1);// Rotate around the z-axis
+
+  drawMess(gl, two+0.03);
+// END of Rocking the last dodecahedron:---------------------------- 
+  modelMatrix = popMatrix();
+//   // draw toru
+//   modelMatrix.setTranslate(-0.4, -1, 0.2);
+//   modelMatrix.scale(1,1,-1);	
+//   modelMatrix.scale(0.3, 0.3, 0.3);
+//   modelMatrix.rotate(currentAngle, 0, 1, 1);
+//   drawToru(gl);
+//   modelMatrix = popMatrix();
+//   pushMatrix(modelMatrix);
+//   //draw cube
+//   modelMatrix.setTranslate(1.5, 1.5, 0.3);
+//   modelMatrix.scale(0.3, 0.3, 0.3);
+//   modelMatrix.rotate(currentAngle, 0, 0, 1);
+//   drawCube(gl);
+//   modelMatrix = popMatrix();
+//   pushMatrix(modelMatrix);
+//   // draw spinning  dodecahedron;
+//   modelMatrix.setTranslate(0.42, 0.4, 0.5); 
+  
+//     // Let mouse-drag move the drawing axes before we do any other drawing:
+//   quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
+//   modelMatrix.concat(quatMatrix); // apply that matrix.
+//   drawAxes(gl);
+//   modelMatrix.scale(0.5,0.5,0.5);
+//   drawMess(gl);
+
+//   modelMatrix = popMatrix(); 
+
+//   pushMatrix(modelMatrix); 
+
+// //draw joint hearts
+//   modelMatrix.setTranslate(1.5, -0.6, 0.0);
+
+//    pushMatrix(modelMatrix); 
+// // Rocking the heart-shaped dish:-----------------------------------
+//   //on the bottom of to the 2nd hollow heart
+//    var sizeSecond = 0.3;
+
+//    modelMatrix.translate(-0.5, -0.48, 0.2); 
+//    modelMatrix.rotate(-180, 1, 0, 0); // Rotate -300 around the x-axis
+//    modelMatrix.rotate(currentAngle, 0, 0, -1); // Rotate around the z-axis
    
-   drawheart(gl,sizeSecond);
-  // END of Rocking the heart-shaped dish:---------------------------- 
-  // Rocking 1st hollow heart:-----------------------------------
-  var size = 0.15;
-  modelMatrix.rotate(90,0,1,0)
-  modelMatrix.rotate(-90,0,0,1)
-  modelMatrix.translate(0.0,0.18,0.0)
-  modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
-  drawheart(gl,size);
-  // END of Rocking 1st hollow heart:---------------------------- 
-  modelMatrix.translate(0.0, 0.35, 0.0); 
-   //drawAxes(gl);
-   drawheart(gl,size);
-  // END of Rocking 2nd  heart:---------------------------- 
-  // Rocking 1st hollow LINE heart:-----------------------------------
-  // on the top of hollow heart
-   var sizeThird = 0.14;
+//    drawheart(gl,sizeSecond);
+//   // END of Rocking the heart-shaped dish:---------------------------- 
+//   // Rocking 1st hollow heart:-----------------------------------
+//   var size = 0.15;
+//   modelMatrix.rotate(90,0,1,0)
+//   modelMatrix.rotate(-90,0,0,1)
+//   modelMatrix.translate(0.0,0.18,0.0)
+//   modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
+//   drawheart(gl,size);
+//   // END of Rocking 1st hollow heart:---------------------------- 
+//   modelMatrix.translate(0.0, 0.35, 0.0); 
+//    //drawAxes(gl);
+//    drawheart(gl,size);
+//   // END of Rocking 2nd  heart:---------------------------- 
+//   // Rocking 1st hollow LINE heart:-----------------------------------
+//   // on the top of hollow heart
+//    var sizeThird = 0.14;
 
-   modelMatrix.translate(0.0, 0.1, 0.0); 
-   modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
-   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-   modelMatrix.translate(0.0, 0.23, 0.0); 
+//    modelMatrix.translate(0.0, 0.1, 0.0); 
+//    modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
+//    modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
+//    modelMatrix.translate(0.0, 0.23, 0.0); 
 
-   drawheart(gl,sizeThird);
-  // END of Rocking 1st hollow LINE heart:---------------------------- 
-  // Rocking 2nd hollow LINE heart:-----------------------------------
-  // on the top of hollow heart
-  var sizeThird = 0.14;
+//    drawheart(gl,sizeThird);
+//   // END of Rocking 1st hollow LINE heart:---------------------------- 
+//   // Rocking 2nd hollow LINE heart:-----------------------------------
+//   // on the top of hollow heart
+//   var sizeThird = 0.14;
 
-  modelMatrix.translate(0.0, 0.1, 0.0); 
-  modelMatrix.rotate(300+cAngle2, 1, 0, 0); // Rotate negatively around the x-axis
-  modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-  modelMatrix.translate(0.0, 0.23, 0.0); 
+//   modelMatrix.translate(0.0, 0.1, 0.0); 
+//   modelMatrix.rotate(300+cAngle2, 1, 0, 0); // Rotate negatively around the x-axis
+//   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
+//   modelMatrix.translate(0.0, 0.23, 0.0); 
 
-  drawheart(gl,sizeThird);
- // END of Rocking 2nd hollow LINE heart:---------------------------- 
-   modelMatrix = popMatrix();
+//   drawheart(gl,sizeThird);
+//  // END of Rocking 2nd hollow LINE heart:---------------------------- 
+//    modelMatrix = popMatrix();
 
 }
 
 //draw single dodecahedron
-function drawMess(gl) {
-  
+function drawMess(gl,size) {
   pushMatrix(modelMatrix);
-
+  modelMatrix.scale(size, size, size);
+  //modelMatrix.scale(0.7, 0.7, 0.7);
   updateModelMatrix(modelMatrix);
-  // Calculate the model view projection matrix
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
-
-  // Draw the dodecahedron
-  gl.drawArrays(gl.TRIANGLE_STRIP,0,180);
-  
-  modelMatrix = popMatrix(); // Retrieve the model matrix 
-
+    // Calculate the matrix to transform the normal based on the model matrix
+  normalMatrix.setInverseOf(modelMatrix);
+  normalMatrix.transpose();
+  updateNormalMatrix(normalMatrix);
+  gl.drawArrays(gl.TRIANGLE_STRIP,1450,180); // DRAW 4 triangles.
+  modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
 
 function drawAxes(gl) {
@@ -659,10 +859,30 @@ function drawToru(gl){
 function drawCube(gl){
   pushMatrix(modelMatrix);
   updateModelMatrix(modelMatrix);
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
-  gl.drawArrays(gl.TRIANGLES,1912,36); // DRAW 4 triangles.
+    // Calculate the matrix to transform the normal based on the model matrix
+  normalMatrix.setInverseOf(modelMatrix);
+  normalMatrix.transpose();
+  updateNormalMatrix(normalMatrix);
+  gl.drawArrays(gl.TRIANGLES,400,36); // DRAW 4 triangles.
+  modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
+}
+
+function drawSphere(gl){
+  pushMatrix(modelMatrix);
+  updateModelMatrix(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+  updateMvpMatrix(mvpMatrix);
+    // Calculate the matrix to transform the normal based on the model matrix
+  normalMatrix.setInverseOf(modelMatrix);
+  normalMatrix.transpose();
+  updateNormalMatrix(normalMatrix)
+
+  //gl.drawElements(gl.TRIANGLES, 196, gl.UNSIGNED_SHORT, 0);
+  gl.drawArrays(gl.TRIANGLES,436,1014); // DRAW 4 triangles.
   modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
 
@@ -690,23 +910,30 @@ function drawheart(gl, size){
 
 function drawGround(gl){
     //---------Draw Ground Plane, without spinning.
-  pushMatrix(modelMatrix);  // SAVE world drawing coords.
+  //pushMatrix(modelMatrix);  // SAVE world drawing coords.
 
   // position it.
-  modelMatrix.translate( 0.4, -0.4, 0.0); 
-  modelMatrix.scale(0.1, 0.1, 0.1);       // shrink by 10X:
-//  modelMatrix.rotate(-60.0, 1,0,0 );
+  modelMatrix.translate( 0.4, -0.4, -0.5); 
+  //modelMatrix.scale(0.1, 0.1, 0.1);       // shrink by 10X:
+  //modelMatrix.setRotate(0.0, 1,0,0 );
   // Drawing:
   // Calculate the model view projection matrix
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
+  updateModelMatrix(modelMatrix);
+  // Pass the model view projection matrix to u_MvpMatrix
+  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
   updateMvpMatrix(mvpMatrix);
+
+  normalMatrix.setInverseOf(modelMatrix);
+  normalMatrix.transpose();
+  updateNormalMatrix(normalMatrix)
+
   // Draw just the ground-plane's vertices
   gl.drawArrays(gl.LINES,                 // use this drawing primitive, and
-                900, // start at this vertex number, and
+                0, // start at this vertex number, and
                 400); // draw this many vertices.
   
-  modelMatrix = popMatrix();  // RESTORE 'world' drawing coords.
+  //modelMatrix = popMatrix();  // RESTORE 'world' drawing coords.
   //===========================================================
 }
 
@@ -782,6 +1009,81 @@ function makeHeart(){
   appendPositions(data);
 }
 
+function makeSphere(){
+  var SPHERE_DIV = 13; //default: 13.  JT: try others: 11,9,7,5,4,3,2,
+
+  var i, ai, si, ci;
+  var j, aj, sj, cj;
+  var p1, p2;
+
+  var positions = [];
+  var vertices = [];
+  
+  var normals = [];
+  var indices=[];
+  var grid = [];
+  var index = 0;
+
+  // Generate coordinates
+  for (j = 0; j <= SPHERE_DIV; j++) {
+    aj = j * Math.PI / SPHERE_DIV;
+    sj = Math.sin(aj);
+    cj = Math.cos(aj);
+    
+
+    for (i = 0; i <= SPHERE_DIV; i++) {
+      ai = i * 2 * Math.PI / SPHERE_DIV;
+      si = Math.sin(ai);
+      ci = Math.cos(ai);
+      let vertex = [];
+      vertices[index]=[];
+      vertex.push(si * sj);  // X
+      vertex.push(cj);       // Y
+      vertex.push(ci * sj);  // Z
+      vertices[index++].push(vertex);
+    }
+  }
+  for (j = 0; j < SPHERE_DIV; j++) {
+      for (i = 0; i < SPHERE_DIV; i++) {
+        p1 = j * (SPHERE_DIV+1) + i;
+        p2 = p1 + (SPHERE_DIV+1);
+
+        positions = positions.concat(vertices[p1].flat());
+        positions.push(1.0);
+        positions = positions.concat(vertices[p2].flat());
+        positions.push(1.0);
+        positions = positions.concat(vertices[p1+1].flat());
+        positions.push(1.0);
+       
+        normals = normals.concat(vertices[p1].flat());
+        normals = normals.concat(vertices[p2].flat());
+        normals = normals.concat(vertices[p1+1].flat());
+        positions = positions.concat(vertices[p1+1].flat());
+        positions.push(1.0);
+        positions = positions.concat(vertices[p2].flat());
+        positions.push(1.0);
+        positions = positions.concat(vertices[p2+1].flat());
+        positions.push(1.0);
+        
+        normals = normals.concat(vertices[p1+1].flat());
+        normals = normals.concat(vertices[p2].flat());
+        normals = normals.concat(vertices[p2+1].flat());
+      }
+    }
+
+  var sphereColors = [];
+  // generate colors
+  for(var i = 0; i< 1014; i++){
+    sphereColors = sphereColors.concat([1.0, 0.4, 0.4, 1.0]);
+  }
+
+
+ //console.log(normals.length/3)
+  appendPositions(positions);
+  appendColors(sphereColors);
+  appendNormals(normals);
+}
+
 function makeMess(){
   // Refer to https://en.wikipedia.org/wiki/Dodecahedron
   // https://en.wikipedia.org/wiki/Regular_dodecahedron
@@ -833,29 +1135,39 @@ function makeMess(){
     vertices = vertices.concat(e).concat(a).concat(center);
     
   }
-  // 180 vertices + 720 vertices
+  console.log("vertices:" + vertices.length/4)
+  // 180 vertices 
 
   var verticesColors = [];
   // generate colors
   for(var i = 0; i< 60; i++){
     verticesColors = verticesColors.concat(color);
   }
-  var colr = [0.5, 1.0, 0.5, 1.0];
-  // group vertices: 400
-  for(var j=0; j< 400; j++){
-    verticesColors = verticesColors.concat(colr);
-  }
-  // 6 vertices
-  var colrA = [1.0, 0.2, 0.2, 1.0,   // bright red
-    1.0, 0.2, 0.2, 1.0,
-    0.2, 1.0, 0.2, 1.0,   // bright green
-    0.2, 1.0, 0.2, 1.0,
-    0.2, 0.2, 1.0, 1.0,   // bright blue.
-    0.2, 0.2, 1.0, 1.0,];
-  verticesColors = verticesColors.concat(colrA);
+ 
+  // // 6 vertices
+  // var colrA = [1.0, 0.2, 0.2, 1.0,   // bright red
+  //   1.0, 0.2, 0.2, 1.0,
+  //   0.2, 1.0, 0.2, 1.0,   // bright green
+  //   0.2, 1.0, 0.2, 1.0,
+  //   0.2, 0.2, 1.0, 1.0,   // bright blue.
+  //   0.2, 0.2, 1.0, 1.0,];
+  // verticesColors = verticesColors.concat(colrA);
   appendPositions(vertices);
 
   appendColors(verticesColors);
+
+  var normals = [];
+  for (var i = 0; i < vertices.length; i += 12) {
+    var a = [vertices[i    ], vertices[i + 1], vertices[i + 2]];
+    var b = [vertices[i + 4], vertices[i + 5], vertices[i + 6]];
+    var c = [vertices[i + 8], vertices[i + 9], vertices[i + 10]];
+    // Normalizing is probably not necessary.
+    // It should also be seperated out.
+    var nor= normal(cross(subtract(a, b), subtract(a, c)));
+    normals = normals.concat(nor, nor, nor);
+  }
+  appendNormals(normals);
+
 }
 
 function makeGroundGrid() {
@@ -870,7 +1182,8 @@ function makeGroundGrid() {
   // Create an (global) array to hold this ground-plane's vertices:
   var gndVerts = [];
             // draw a grid made of xcount+ycount lines; 2 vertices per line.
-            
+  var gndNorms = [];     
+  var gndColrs = [];     
   var xgap = xymax/(xcount-1);    // HALF-spacing between lines in x,y;
   var ygap = xymax/(ycount-1);    // (why half? because v==(0line number/2))
   
@@ -905,8 +1218,18 @@ function makeGroundGrid() {
       gndVerts[j+3] = 1.0;                  // w.
     }
   }
+  var colr = [0.5, 1.0, 0.5, 1.0];
+  // group vertices: 400
+  for(var j=0; j< 400; j++){
+    gndColrs = gndColrs.concat(colr);
+  }
 
+  for(var j=0; j< 400; j++){
+    gndNorms = gndNorms.concat([0,0,1]);
+  }
   appendPositions(gndVerts);
+  appendNormals(gndNorms);
+  appendColors(gndColrs);
 }
 
 function append_Axes() {
@@ -1076,55 +1399,66 @@ function makeCube(){
   // 36 vertices
   var cubeVert = [
     // Front face
-    -1.0, -1.0,  1.0, 1.0,
-    -1.0,  1.0,  1.0, 1.0,
-     1.0, -1.0,  1.0, 1.0,
-     1.0, -1.0,  1.0, 1.0,
      1.0,  1.0,  1.0, 1.0,
     -1.0,  1.0,  1.0, 1.0,
-    
-    // Back face
-    -1.0, -1.0, -1.0, 1.0,
-    -1.0,  1.0, -1.0, 1.0,
-     1.0, -1.0, -1.0, 1.0,
-     1.0, -1.0, -1.0, 1.0,
-     1.0,  1.0, -1.0, 1.0,
-    -1.0,  1.0, -1.0, 1.0,
-    
-    // Top face
-    -1.0,  1.0, -1.0, 1.0,
-    -1.0,  1.0,  1.0, 1.0,
-     1.0,  1.0, -1.0, 1.0,
-     1.0,  1.0, -1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
      1.0,  1.0,  1.0, 1.0,
-    -1.0,  1.0,  1.0, 1.0,
-    
-    // Bottom face
-    -1.0, -1.0, -1.0, 1.0,
     -1.0, -1.0,  1.0, 1.0,
-     1.0, -1.0, -1.0, 1.0,
-     1.0, -1.0, -1.0, 1.0,
      1.0, -1.0,  1.0, 1.0,
-    -1.0, -1.0,  1.0, 1.0,
-    
+
     // Right face
-     1.0, -1.0, -1.0, 1.0,
-     1.0, -1.0,  1.0, 1.0,
-     1.0,  1.0, -1.0, 1.0,
      1.0,  1.0, -1.0, 1.0,
      1.0,  1.0,  1.0, 1.0,
      1.0, -1.0,  1.0, 1.0,
-    
-    // Left face
-    -1.0, -1.0, -1.0, 1.0,
-    -1.0, -1.0,  1.0, 1.0,
-    -1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+
+     // Top face
+     1.0,  1.0, -1.0, 1.0,
     -1.0,  1.0, -1.0, 1.0,
     -1.0,  1.0,  1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+     1.0,  1.0,  1.0, 1.0,
+
+     // Left face
+    -1.0,  1.0,  1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0,
+    -1.0,  1.0,  1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0,
     -1.0, -1.0,  1.0, 1.0,
+
+    // Bottom face
+     1.0, -1.0,  1.0, 1.0,
+    -1.0, -1.0,  1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+
+    // Back face
+    -1.0,  1.0, -1.0, 1.0,
+     1.0,  1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+    -1.0,  1.0, -1.0, 1.0,
+     1.0, -1.0, -1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0
   ]
 
+  var normals = [    // Normal
+    0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  0.0, 0.0, 1.0,  0.0, 0.0, 1.0,// v0-v1-v2-v3 front
+    1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
+    0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  0.0, 1.0, 0.0,  0.0, 1.0, 0.0,// v0-v5-v6-v1 up
+    -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,// v1-v6-v7-v2 left
+    0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0, // v7-v4-v3-v2 down
+    0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0 // v4-v7-v6-v5 back
+  ];
+
+
  appendPositions(cubeVert);
+ 
  var cubeColr = [];
  cubeColr = cubeColr.concat(color);
  cubeColr = cubeColr.concat(color);
@@ -1132,9 +1466,54 @@ function makeCube(){
   1.0, 0.4, 1.0, 1.0,  1.0, 1.0, 0.0, 1.0,  0.6, 0.8, 1.0, 1.0,];
   cubeColr = cubeColr.concat(seColr);
   appendColors(cubeColr);
+  appendNormals(normals);
 }
 
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight*0.8;
+}
+
+function genelookat(eyeX, eyeY, eyeZ, lookAtX, lookAtY, lookAtZ){
+
+  eyeV = [eyeX, eyeY, eyeZ];
+  lookV = [lookAtX, lookAtY, lookAtZ]
+
+  r = subtract(lookV,eyeV);
+
+  len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2])
+
+  return [r[0]/len, r[1]/len, r[2]/len];
+}
+
+function subtract(a, b){
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function cross(a,b)
+{
+  return [a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0]];
+}
+
+function normal(r)
+{
+  var len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001; // prevent divide by 0
+
+  return [r[0]/len,r[1]/len,r[2]/len];
+}
+
+function changeLightingMode() {
+
+    lightingMode = lightingMode == 1 ? 0 : 1;
+    document.getElementById('LightingMode').innerHTML = lightingMode == 0 ? "Blinn-Phong lighting" : "Phong lighting";
+    console.log("change lighting mode to " + lightingMode);
+}
+
+function changeShadingMode() {
+
+    shadingMode = shadingMode == 1 ? 0 : 1;
+    document.getElementById('shadingMode').innerHTML = shadingMode == 0 ? "Phong shadinging" : "Gouraud shading";
+    console.log("change shading mode to " + shadingMode);
 }
