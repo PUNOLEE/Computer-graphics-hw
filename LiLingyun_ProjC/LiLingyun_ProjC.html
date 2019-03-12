@@ -14,28 +14,20 @@
     <div style="text-align: center; color:white">
       <br>
       Open Console, please: (right-click-->'Inspect Element'-->'Console' tab
-      <br>
-      <button onclick="changeLightingMode()" style="display:inline">change lighting</button>
-        <div id="LightingMode" style="display:inline"> Blinn-Phong lighting
-        </div>
-        <br>
-        <button onclick="changeShadingMode()" style="display:inline">change shading</button>
-        <div id="shadingMode" style="display:inline"> Gouraud shading
-        </div>
-        <br>
+      <BR />
+      Use DAT GUI controls!<BR />
+      Try hit M key to change the sphere's matrial.
+      <BR />
       Try drag the head light <BR />
-     <!--  Current Quaternion: w + xi + yj + zk where (i,j,k) are 3-way imaginary numbers:
-      <div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1.  length=1. </div> -->
-      
-      Hit ^ v < > to step forward backward left right Hit A D W S to look left right up down<BR />
+      Hit ^ v < > to step forward backward left right <BR />Hit A D W S to look left right up down<BR />
     </div>
 
     <! Load webGL-supplied libraries  >
-    <script src="../lib/webgl-utils.js"></script>
-    <script src="../lib/webgl-debug.js"></script>
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
     <! Load our textbook-supplied libraries>
-    <script src="../lib/cuon-utils.js"></script>
-    <script src="../lib/cuon-matrix-quat03.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix-quat03.js"></script>
     <script src="materials_Ayerdi.js"></script>
 		<script src="lights-JT.js"></script>
     <! Load OUR 3D graphics drawing program: lib1 by Vincent Bommier, 2018>
@@ -45,7 +37,7 @@
     <script src="LiLingyun_ProjC.js"></script>
     
     <! OUR program >
-    <script type="text/javascript" src="../lib/dat.gui.min.js"></script>
+    <script type="text/javascript" src="lib/dat.gui.min.js"></script>
     <!DAT.GUI>
 
   </body>

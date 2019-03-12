@@ -274,7 +274,7 @@ var uLoc_lightingMode = false;
 var uLoc_shadingMode = false;
 
 var lightingMode = 0;
-var shadingMode = 1;
+var shadingMode = 0;
 
 var g_myShader;
 //	... for our first light source:   (stays false if never initialized)

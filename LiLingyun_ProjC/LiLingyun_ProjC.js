@@ -33,7 +33,7 @@ var g_LambAtX = 5.0, g_LambAtY = 5.0, g_LambAtZ = 20.0;
 var lampAmbiR = 1.0, lampAmbiG = 1.0, lampAmbiB = 1.0;
 var lampDiffR = 1.0, lampDiffG = 1.0, lampDiffB = 1.0;
 var lampSpecR = 1.0, lampSpecG = 1.0, lampSpecB = 1.0;
-var lampOn = true; var headLightOn = true;
+//var lampOn = true; var headLightOn = true;
 
 var mat_sphere = 1;
 var viewMatrix = new Matrix4();
@@ -47,15 +47,31 @@ var qTot = new Quaternion(0,0,0,1); // 'current' orientation (made from qNew)
 var FizzyText = function() {
   this.position = 'Position';
   this.speed = 30.0;
-  // this.left = 0.0;
-  // this.right = 0.0;
-  // this.bottom = 0.0;
-  // this.up = 0.0;
-  // this.near = 1.0;
-  // this.far = 100.0;
+  this.lampAmbiR = 1.0;
+  this.lampAmbiG = 1.0;
+  this.lampAmbiB = 1.0;
+  this.lampDiffR = 1.0;
+  this.lampDiffG = 1.0;
+  this.lampDiffB = 1.0;
+  this.lampSpecR = 1.0;
+  this.lampSpecG = 1.0;
+  this.lampSpecB = 1.0;
+  this.lightingMode = 'Blinn-Phong lighting';
+  this.shadingMode = 'Gouraud shading';
 };
 
-
+var obj = { 
+  changeLightingMode:function(){ 
+    lightingMode = lightingMode == 1 ? 0 : 1;
+    text.lightingMode = lightingMode == 0 ? 'Blinn-Phong lighting' : 'Phong lighting';
+    console.log("change lighting mode to " + lightingMode);
+  },
+  changeShadingMode:function(){
+    shadingMode = shadingMode == 1 ? 0 : 1;
+    text.shadingMode = shadingMode == 0 ? 'Phong shadinging' : 'Gouraud shading';
+    console.log("change shading mode to " + shadingMode);
+  }
+};
 
 window.onload = function() {
   // load controls and canvas
@@ -66,15 +82,24 @@ window.onload = function() {
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
 
-  // var f2 = gui.addFolder('Frustum parameters');
-  // f2.add(text, 'left').onChange(setLeft);
-  // f2.add(text, 'right').onChange(setRight);
-  // f2.add(text, 'bottom').onChange(setBottom);  
-  // f2.add(text, 'up').onChange(setUp);
-  // f2.add(text, 'near').onChange(setNear);
-  // f2.add(text, 'far').onChange(setFar);
-  // f2.open();
+  var f2 = gui.addFolder('lamp');
+  f2.add(text, 'lampAmbiR',0, 1).onChange(seLampAmbiR);
+  f2.add(text, 'lampAmbiG',0, 1).onChange(setlampAmbiG);
+  f2.add(text, 'lampAmbiB',0, 1).onChange(setlampAmbiB);  
+  f2.add(text, 'lampDiffR',0, 1).onChange(setlampDiffR);
+  f2.add(text, 'lampDiffG',0, 1).onChange(setlampDiffG);
+  f2.add(text, 'lampDiffB',0, 1).onChange(setlampDiffB);
+  f2.add(text, 'lampSpecR',0, 1).onChange(setlampSpecR);
+  f2.add(text, 'lampSpecG',0, 1).onChange(setlampSpecG);
+  f2.add(text, 'lampSpecB',0, 1).onChange(setlampSpecB);
+  f2.open();
 
+  var f3 = gui.addFolder('lighting & shading');
+  gui.add(text, 'lightingMode').listen();
+  gui.add(obj, 'changeLightingMode').name('change lighting');
+  gui.add(text, 'shadingMode').listen();
+  gui.add(obj, 'changeShadingMode').name('change shading');
+  f3.open();
 };
 
 
@@ -92,11 +117,7 @@ function main() {
 
    
    
-   //makeHeart();
    makeGroundGrid();
-   //append_Axes();
-   //append_Wedge();
-   //makeTorus();
    makeCube();
    makeSphere();
    makeMess();
@@ -137,11 +158,42 @@ function setSpeed(){
   console.log("current speed:"+ Math.floor(text.speed));
 }
 
-function setLeft(){
-  console.log("set Left:"+ Math.floor(text.left));
+function seLampAmbiR(){
+  lampAmbiR = text.lampAmbiR;
+  console.log("setLampAmbiR:"+ text.lampAmbiR);
 }
-
-
+function setlampAmbiG(){
+  lampAmbiR = text.lampAmbiG;
+  console.log("setLampAmbiG:"+ text.lampAmbiG);
+}
+function setlampAmbiB(){
+  lampAmbiR = text.lampAmbiB;
+  console.log("setLampAmbiB:"+ text.lampAmbiB);
+}
+function setlampDiffR(){
+  lampDiffR = text.lampDiffR;
+  console.log("setlampDiffR:"+ text.lampDiffR);
+}
+function setlampDiffG(){
+  lampDiffG = text.lampDiffG;
+  console.log("setlampDiffG:"+ text.lampDiffG);
+}
+function setlampDiffB(){
+  lampDiffB = text.lampDiffB;
+  console.log("setlampDiffB:"+ text.lampDiffB);
+}
+function setlampSpecR(){
+  lampSpecR = text.lampSpecR;
+  console.log("setlampSpecR:"+ text.lampSpecR);
+}
+function setlampSpecG(){
+  lampSpecG = text.lampSpecG;
+  console.log("setlampSpecG:"+ text.lampSpecG);
+}
+function setlampSpecB(){
+  lampSpecB = text.lampSpecB;
+  console.log("setlampSpecB:"+ text.lampSpecB);
+}
 function myMouseDown(ev, canvas) {
 //==============================================================================
 // Called when user PRESSES down any mouse button;
@@ -308,14 +360,8 @@ function dragQuat(xdrag, ydrag) {
 
 
 function keydown(ev, gl) {// Called when user hits any key button;
-  if (ev.keyCode == 32) { // space key
-        lampOn = lampOn ? false : true;
-        console.log("lampOn " + lampOn);
-    } else if (ev.keyCode == 13) { // enter key
-        headLightOn = headLightOn ? false : true;
-        console.log("headLightOn " + headLightOn);
-    } 
-    else if (ev.keyCode == 77) { // m key
+  
+    if (ev.keyCode == 77) { // m key
         mat_sphere = (mat_sphere + 1) % 20;
         console.log("change the material");
     }
@@ -508,8 +554,6 @@ function drawView(gl){
 
   gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
    gl.viewport(0, 0, canvas.width, canvas.height);
-  // pushMatrix(modelMatrix); 
-  // modelMatrix.setRotate(90, 0, -1, 0);
   projMatrix.setPerspective(35, canvas.width / canvas.height, 1, 100);
   viewMatrix.setLookAt(g_EyeX,g_EyeY, g_EyeZ,      // center of projection
     g_LookAtX, g_LookAtY, g_LookAtZ,      // look-at point 
@@ -526,16 +570,14 @@ function drawView(gl){
   eyePosWorld.set([g_EyeX, g_EyeY, g_EyeZ]);
   gl.uniform3fv(uLoc_eyePosWorld, eyePosWorld); 
 
-   //---------------For the light source(s):
+   //---------------update the light source(s):
   gl.uniform3fv(lamp0.u_pos,  lamp0.I_pos.elements.slice(0,3));
   //     ('slice(0,3) member func returns elements 0,1,2 (x,y,z) ) 
   gl.uniform3fv(lamp0.u_ambi, lamp0.I_ambi.elements);   // ambient
   gl.uniform3fv(lamp0.u_diff, lamp0.I_diff.elements);   // diffuse
   gl.uniform3fv(lamp0.u_spec, lamp0.I_spec.elements);   // Specular
-//  console.log('lamp0.u_pos',lamp0.u_pos,'\n' );
-//  console.log('lamp0.I_diff.elements', lamp0.I_diff.elements, '\n');
 
-  //---------------For the Material object(s):
+  //---------------update the Material object(s):
   gl.uniform3fv(matl0.uLoc_Ke, matl0.K_emit.slice(0,3));        // Ke emissive
   gl.uniform3fv(matl0.uLoc_Ka, matl0.K_ambi.slice(0,3));        // Ka ambient
   gl.uniform3fv(matl0.uLoc_Kd, matl0.K_diff.slice(0,3));        // Kd diffuse
@@ -543,39 +585,25 @@ function drawView(gl){
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl0.K_shiny, 10));     // Kshiny 
 
   lamp0.I_pos.elements.set([g_LambAtX, g_LambAtY, g_LambAtZ]);
-  if (lampOn) {
-        lamp0.I_ambi.elements.set([lampAmbiR, lampAmbiG, lampAmbiB]);
-        lamp0.I_diff.elements.set([lampDiffR, lampDiffG, lampDiffB]);
-        lamp0.I_spec.elements.set([lampSpecR, lampSpecG, lampSpecB]);
-    } else {
-        lamp0.I_ambi.elements.set([0.0, 0.0, 0.0]);
-        lamp0.I_diff.elements.set([0.0, 0.0, 0.0]);
-        lamp0.I_spec.elements.set([0.0, 0.0, 0.0]);
-    }
+  lamp0.I_ambi.elements.set([lampAmbiR, lampAmbiG, lampAmbiB]);
+  lamp0.I_diff.elements.set([lampDiffR, lampDiffG, lampDiffB]);
+  lamp0.I_spec.elements.set([lampSpecR, lampSpecG, lampSpecB]);
+   
   headLight.I_pos.elements.set([g_EyeX, g_EyeY, g_EyeZ]);
-  if (headLightOn) {
-        headLight.I_ambi.elements.set([1.0, 1.0, 1.0]);
-        headLight.I_diff.elements.set([1.0, 1.0, 1.0]);
-        headLight.I_spec.elements.set([1.0, 1.0, 1.0]);
-    } else {
-        headLight.I_ambi.elements.set([0.0, 0.0, 0.0]);
-        headLight.I_diff.elements.set([0.0, 0.0, 0.0]);
-        headLight.I_spec.elements.set([0.0, 0.0, 0.0]);
-    }
-
-  gl.uniform3fv(lamp0.u_pos, lamp0.I_pos.elements.slice(0, 3));
-  gl.uniform3fv(lamp0.u_ambi, lamp0.I_ambi.elements); // ambient
-  gl.uniform3fv(lamp0.u_diff, lamp0.I_diff.elements); // diffuse
-  gl.uniform3fv(lamp0.u_spec, lamp0.I_spec.elements); // Specular
-  gl.uniform3fv(headLight.u_pos, headLight.I_pos.elements.slice(0, 3));
-  gl.uniform3fv(headLight.u_ambi, headLight.I_ambi.elements); // ambient
-  gl.uniform3fv(headLight.u_diff, headLight.I_diff.elements); // diffuse
-  gl.uniform3fv(headLight.u_spec, headLight.I_spec.elements); // Specular
-  // normalMatrix.setInverseOf(modelMatrix);
-  // normalMatrix.transpose();
+  headLight.I_ambi.elements.set([1.0, 1.0, 1.0]);
+  headLight.I_diff.elements.set([1.0, 1.0, 1.0]);
+  headLight.I_spec.elements.set([1.0, 1.0, 1.0]);
   
-  // pushMatrix(modelMatrix); 
-  // modelMatrix =  popMatrix(); 
+  // update the light sources location
+  gl.uniform3fv(lamp0.u_pos, lamp0.I_pos.elements.slice(0, 3));
+  gl.uniform3fv(lamp0.u_ambi, lamp0.I_ambi.elements); 
+  gl.uniform3fv(lamp0.u_diff, lamp0.I_diff.elements); 
+  gl.uniform3fv(lamp0.u_spec, lamp0.I_spec.elements);
+  gl.uniform3fv(headLight.u_pos, headLight.I_pos.elements.slice(0, 3));
+  gl.uniform3fv(headLight.u_ambi, headLight.I_ambi.elements); 
+  gl.uniform3fv(headLight.u_diff, headLight.I_diff.elements);
+  gl.uniform3fv(headLight.u_spec, headLight.I_spec.elements);
+
   draw(gl);
 
 }
@@ -585,19 +613,16 @@ function draw(gl) {
   modelMatrix.setIdentity(); 
  modelMatrix.setTranslate(0.0, 0.0, 0.0);
   modelMatrix.rotate(-70,1,0,0);
-  // Be sure to clear the screen before re-drawing ...
-  //modelMatrix.setTranslate(0.0, 0.0, 0.0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
   // draw ground grid
   viewMatrix.rotate(-90.0, 1,0,0); 
-  //viewMatrix.translate(0.0, 0.0, -0.3); 
   viewMatrix.scale(3, 3,3);  
  
   drawGround(gl);
 
   modelMatrix = popMatrix(); 
-  
+  // draw three joint cube
   modelMatrix.setTranslate(0.7, -1.5, 0.0);
   modelMatrix.rotate(-currentAngle, 0, 0, 1);
   modelMatrix.scale(0.3, 0.3, 0.3);
@@ -612,7 +637,7 @@ function draw(gl) {
   modelMatrix.rotate(currentAngle*3, 0, 0, 1);
   drawCube(gl);
   modelMatrix = popMatrix();
-  
+  // draw center spinning sphere
   var matl1 = new Material(mat_sphere);
   gl.uniform3fv(matl0.uLoc_Ke, matl1.K_emit.slice(0, 3)); // Ke emissive
   gl.uniform3fv(matl0.uLoc_Ka, matl1.K_ambi.slice(0, 3)); // Ka ambient
@@ -620,20 +645,13 @@ function draw(gl) {
   gl.uniform3fv(matl0.uLoc_Ks, matl1.K_spec.slice(0, 3)); // Ks specular
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl1.K_shiny, 10)); // Kshiny
   modelMatrix.setTranslate(0, 0, 0);
-  //modelMatrix.scale(1,1,-1);  
   modelMatrix.scale(0.5, 0.5, 0.5);
   modelMatrix.rotate(currentAngle, 0, 0, 1);
   pushMatrix(modelMatrix);
   drawSphere(gl);
 
   modelMatrix = popMatrix();
- 
-    // modelMatrix.setTranslate(0,2,0);
-//   // draw ground axes
-//   drawAxes(gl);
-// quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
-//   modelMatrix.concat(quatMatrix); // apply that matrix.
-  
+
   var matl2 = new Material(6);
   gl.uniform3fv(matl0.uLoc_Ke, matl2.K_emit.slice(0, 3)); // Ke emissive
   gl.uniform3fv(matl0.uLoc_Ka, matl2.K_ambi.slice(0, 3)); // Ka ambient
@@ -641,8 +659,6 @@ function draw(gl) {
   gl.uniform3fv(matl0.uLoc_Ks, matl2.K_spec.slice(0, 3)); // Ks specular
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl2.K_shiny, 10)); // Kshiny
   modelMatrix.setTranslate(2,0.8,0.3);
-  //modelMatrix.rotate(-currentAngle, 0, 1, 0);
-  //modelMatrix.scale(0.4, 0.4, 0.4);
   // spinning BASE dodecahedron;
  var base = 0.15;
   modelMatrix.translate(0.42, 0.4, 0.0); 
@@ -725,84 +741,7 @@ function draw(gl) {
   drawMess(gl, two+0.03);
 // END of Rocking the last dodecahedron:---------------------------- 
   modelMatrix = popMatrix();
-//   // draw toru
-//   modelMatrix.setTranslate(-0.4, -1, 0.2);
-//   modelMatrix.scale(1,1,-1);	
-//   modelMatrix.scale(0.3, 0.3, 0.3);
-//   modelMatrix.rotate(currentAngle, 0, 1, 1);
-//   drawToru(gl);
-//   modelMatrix = popMatrix();
-//   pushMatrix(modelMatrix);
-//   //draw cube
-//   modelMatrix.setTranslate(1.5, 1.5, 0.3);
-//   modelMatrix.scale(0.3, 0.3, 0.3);
-//   modelMatrix.rotate(currentAngle, 0, 0, 1);
-//   drawCube(gl);
-//   modelMatrix = popMatrix();
-//   pushMatrix(modelMatrix);
-//   // draw spinning  dodecahedron;
-//   modelMatrix.setTranslate(0.42, 0.4, 0.5); 
-  
-//     // Let mouse-drag move the drawing axes before we do any other drawing:
-//   quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w); // Quaternion-->Matrix
-//   modelMatrix.concat(quatMatrix); // apply that matrix.
-//   drawAxes(gl);
-//   modelMatrix.scale(0.5,0.5,0.5);
-//   drawMess(gl);
 
-//   modelMatrix = popMatrix(); 
-
-//   pushMatrix(modelMatrix); 
-
-// //draw joint hearts
-//   modelMatrix.setTranslate(1.5, -0.6, 0.0);
-
-//    pushMatrix(modelMatrix); 
-// // Rocking the heart-shaped dish:-----------------------------------
-//   //on the bottom of to the 2nd hollow heart
-//    var sizeSecond = 0.3;
-
-//    modelMatrix.translate(-0.5, -0.48, 0.2); 
-//    modelMatrix.rotate(-180, 1, 0, 0); // Rotate -300 around the x-axis
-//    modelMatrix.rotate(currentAngle, 0, 0, -1); // Rotate around the z-axis
-   
-//    drawheart(gl,sizeSecond);
-//   // END of Rocking the heart-shaped dish:---------------------------- 
-//   // Rocking 1st hollow heart:-----------------------------------
-//   var size = 0.15;
-//   modelMatrix.rotate(90,0,1,0)
-//   modelMatrix.rotate(-90,0,0,1)
-//   modelMatrix.translate(0.0,0.18,0.0)
-//   modelMatrix.rotate(cAngle2, 0, 1, 0); // Rotate around the x & y-axis
-//   drawheart(gl,size);
-//   // END of Rocking 1st hollow heart:---------------------------- 
-//   modelMatrix.translate(0.0, 0.35, 0.0); 
-//    //drawAxes(gl);
-//    drawheart(gl,size);
-//   // END of Rocking 2nd  heart:---------------------------- 
-//   // Rocking 1st hollow LINE heart:-----------------------------------
-//   // on the top of hollow heart
-//    var sizeThird = 0.14;
-
-//    modelMatrix.translate(0.0, 0.1, 0.0); 
-//    modelMatrix.rotate(300+cAngle2, -1, 0, 0); // Rotate negatively around the x-axis
-//    modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-//    modelMatrix.translate(0.0, 0.23, 0.0); 
-
-//    drawheart(gl,sizeThird);
-//   // END of Rocking 1st hollow LINE heart:---------------------------- 
-//   // Rocking 2nd hollow LINE heart:-----------------------------------
-//   // on the top of hollow heart
-//   var sizeThird = 0.14;
-
-//   modelMatrix.translate(0.0, 0.1, 0.0); 
-//   modelMatrix.rotate(300+cAngle2, 1, 0, 0); // Rotate negatively around the x-axis
-//   modelMatrix.scale(0.6,0.6,0.6);   // SHRINK axes by 60% for this heart
-//   modelMatrix.translate(0.0, 0.23, 0.0); 
-
-//   drawheart(gl,sizeThird);
-//  // END of Rocking 2nd hollow LINE heart:---------------------------- 
-//    modelMatrix = popMatrix();
 
 }
 
@@ -820,39 +759,6 @@ function drawMess(gl,size) {
   normalMatrix.transpose();
   updateNormalMatrix(normalMatrix);
   gl.drawArrays(gl.TRIANGLE_STRIP,1450,180); // DRAW 4 triangles.
-  modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
-}
-
-function drawAxes(gl) {
-  //-----------------------------------------------------------------------------
-  // Calculate the model view projection matrix
-  updateModelMatrix(modelMatrix);
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
-  // Pass the model view projection matrix to u_MvpMatrix
-  updateMvpMatrix(mvpMatrix);
-  gl.drawArrays(gl.LINES,1300,6);   // 2nd set of 6 verts in GPU.
-}
-
-function drawFullWedge(gl) {
-  //-----------------------------------------------------------------------------
-  // Draw all 4 triangles of our tetrahedron
-  // base is in z=0 plane centered at origin; apex on z axis.
-    pushMatrix(modelMatrix);  // SAVE the given myMatrix contents, then:
-    updateModelMatrix(modelMatrix);
-    mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
-  // Pass the model view projection matrix to u_MvpMatrix
-    updateMvpMatrix(mvpMatrix);
-    gl.drawArrays(gl.TRIANGLE_STRIP,1306,6); // DRAW 4 triangles.
-    modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
-}
-
-function drawToru(gl){
-  pushMatrix(modelMatrix);
-  updateModelMatrix(modelMatrix);
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
-  // Pass the model view projection matrix to u_MvpMatrix
-  updateMvpMatrix(mvpMatrix);
-  gl.drawArrays(gl.TRIANGLE_STRIP,1312,600); // DRAW 4 triangles.
   modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
 
@@ -886,27 +792,6 @@ function drawSphere(gl){
   modelMatrix = popMatrix();   // RESTORE the original myMatrix contents.
 }
 
-function drawheart(gl, size){
-
-  pushMatrix(modelMatrix);
-  
-  modelMatrix.scale(size,size,size); 
-  updateModelMatrix(modelMatrix);
-  // Calculate the model view projection matrix
-  mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
-  // Pass the model view projection matrix to u_MvpMatrix
-  updateMvpMatrix(mvpMatrix);
-  // when size equals to 0.15, draw a hollow heart
-  // when size equals to 0.3, draw a heart-shaped dish
-  // else draw a line-shaped heart
-  if(size === 0.15)
-    gl.drawArrays(gl.LINE_STRIP,180,720);
-  else if(size === 0.3)
-    gl.drawArrays(gl.TRIANGLE_FAN,180,720);
-  else
-    gl.drawArrays(gl.LINES,180,720);
-  modelMatrix = popMatrix(); // Retrieve the model matrix
-}
 
 function drawGround(gl){
     //---------Draw Ground Plane, without spinning.
@@ -975,11 +860,6 @@ function animate() {
   }
 }
 
-function updateColorControl(){
-  // change color over time
-  gl.uniform4f(u_RandomColor, Math.abs(currentColor/300 -0.2), Math.abs(currentColor/300 -0.5), Math.abs(currentColor/300 -0.6), 0.7); 
-
-}
 // basic colors
 var color = [
     1.0, 0.4, 0.4, 1.0,  1.0, 1.0, 0.0, 1.0,  0.8, 0.5, 1.0, 1.0, 
@@ -989,25 +869,6 @@ var color = [
     1.0, 1.0, 0.0, 1.0,  0.4, 0.4, 1.0, 1.0,  0.6, 1.0, 1.0, 1.0
   ];
 
-function makeHeart(){
-  var data = [];
-
-  //Formula from http://mathworld.wolfram.com/HeartCurve.html
-  for (let i = 0; i < 360; i++) {
-    t = i;
-    x = 16 * Math.pow(Math.sin(t),3);
-    y = 13 * Math.cos(t) - 5* Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)
-    data = data.concat([x/10,y/10,0.5,1.0]);
-    data = data.concat([x/10,y/10,-0.0,1.0]);
-  }
-
-  // var colors = [];
-  // for(var i = 0; i< 48; i++){
-  //   colors = colors.concat(color);
-  // }
-
-  appendPositions(data);
-}
 
 function makeSphere(){
   var SPHERE_DIV = 13; //default: 13.  JT: try others: 11,9,7,5,4,3,2,
@@ -1135,7 +996,7 @@ function makeMess(){
     vertices = vertices.concat(e).concat(a).concat(center);
     
   }
-  console.log("vertices:" + vertices.length/4)
+  //console.log("vertices:" + vertices.length/4)
   // 180 vertices 
 
   var verticesColors = [];
@@ -1232,168 +1093,6 @@ function makeGroundGrid() {
   appendColors(gndColrs);
 }
 
-function append_Axes() {
-  //-----------------------------------------------------------------------------
-  // Create & store 'Axes' 3D part that uses gl.LINES primitives to draw 
-  // the +x,+y,+z axes as unit-length red,green,blue lines outwards from origin,
-  // using the CURRENT DRAWING AXES (as defined my ModelMatrix on GPU).
-    appendPositions([0.0, 0.0, 0.0, 1.0,      // x axis
-                     1.0, 0.0, 0.0, 1.0,
-                     0.0, 0.0, 0.0, 1.0,      // y axis
-                     0.0, 1.0, 0.0, 1.0,
-                     0.0, 0.0, 0.0, 1.0,      // z axis
-                     0.0, 0.0, 1.0, 1.0, ]);
-}
-
-function append_Wedge() {
-  //------------------------------------------------------------------------------
-  // Create & store a 2-triangle wedge-like 3D part.
-  // (from old 5.04.ControlMulti starter code).
-    var c30 = Math.sqrt(0.75);					// == cos(30deg) == sqrt(3) / 2
-    var sq2	= Math.sqrt(2.0);						
-  
-  /*
-    // Coordinates(x,y,z,w) and colors (R,G,B,A) for a tetrahedron:
-    // Apex on +z axis; equilateral triangle base at z=0 centered at origin.
-    Nodes:
-       0.0,	 0.0, sq2, 1.0,		// n0 (apex, +z axis;  white)
-       c30, -0.5, 0.0, 1.0, 	// n1 (base: lower rt; blue)
-       0.0,  1.0, 0.0, 1.0,  	// n2 (base: +y axis;  red)
-      -c30, -0.5, 0.0, 1.0, 	// n3 (base:lower lft; grn)
-        // Face 0: (right side);  Node 0,1,2
-        // Face 1: (left side);   Node 0,2,3
-        // Face 2: (lower side);  Node 0,3,1    // Use these last 2 faces...
-        // Face 3: (base side);   Node 3,2,1.  
-  */
-    appendPositions([  0.0,  0.0, sq2, 1.0,  // node 0     // triangle-strip.  
-                      -c30, -0.5, 0.0, 1.0,  // node 3     // Draw 1st 4 verts only.
-                       c30, -0.5, 0.0, 1.0,  // node 1
-                       0.0,  1.0, 0.0, 1.0,  // node 2
-                       0.0,	 0.0, sq2, 1.0,  // node 0
-                      -c30, -0.5, 0.0, 1.0,  // node 3
-    ]);
-    appendColors([1.0, 0.4, 0.4, 1.0,  
-      1.0, 1.0, 0.0, 1.0,  
-      0.8, 0.5, 1.0, 1.0, 
-      1.0, 0.4, 1.0, 1.0,  
-      1.0, 1.0, 0.0, 1.0,  
-      0.6, 0.8, 1.0, 1.0, 
-                ]);
-  
-}
-
-function makeTorus() {
-  //==============================================================================
-  // 		Create a torus centered at the origin that circles the z axis.  
-  // Terminology: imagine a torus as a flexible, cylinder-shaped bar or rod bent 
-  // into a circle around the z-axis. The bent bar's centerline forms a circle
-  // entirely in the z=0 plane, centered at the origin, with radius 'rbend'.  The 
-  // bent-bar circle begins at (rbend,0,0), increases in +y direction to circle  
-  // around the z-axis in counter-clockwise (CCW) direction, consistent with our
-  // right-handed coordinate system.
-  // 		This bent bar forms a torus because the bar itself has a circular cross-
-  // section with radius 'rbar' and angle 'phi'. We measure phi in CCW direction 
-  // around the bar's centerline, circling right-handed along the direction 
-  // forward from the bar's start at theta=0 towards its end at theta=2PI.
-  // 		THUS theta=0, phi=0 selects the torus surface point (rbend+rbar,0,0);
-  // a slight increase in phi moves that point in -z direction and a slight
-  // increase in theta moves that point in the +y direction.  
-  // To construct the torus, begin with the circle at the start of the bar:
-  //					xc = rbend + rbar*cos(phi); 
-  //					yc = 0; 
-  //					zc = -rbar*sin(phi);			(note negative sin(); right-handed phi)
-  // and then rotate this circle around the z-axis by angle theta:
-  //					x = xc*cos(theta) - yc*sin(theta) 	
-  //					y = xc*sin(theta) + yc*cos(theta)
-  //					z = zc
-  // Simplify: yc==0, so
-  //					x = (rbend + rbar*cos(phi))*cos(theta)
-  //					y = (rbend + rbar*cos(phi))*sin(theta) 
-  //					z = -rbar*sin(phi)
-  // To construct a torus from a single triangle-strip, make a 'stepped spiral' 
-  // along the length of the bent bar; successive rings of constant-theta, using 
-  // the same design used for cylinder walls in 'makeCyl()' and for 'slices' in 
-  // makeSphere().  Unlike the cylinder and sphere, we have no 'special case' 
-  // for the first and last of these bar-encircling rings.
-  //
-  var rbend = 1.0;										// Radius of circle formed by torus' bent bar
-  var rbar = 0.5;											// radius of the bar we bent to form torus
-  var barSlices = 23;									// # of bar-segments in the torus: >=3 req'd;
-                                      // more segments for more-circular torus
-  var barSides = 13;										// # of sides of the bar (and thus the 
-                                      // number of vertices in its cross-section)
-                                      // >=3 req'd;
-                                      // more sides for more-circular cross-section
-  // for nice-looking torus with approx square facets, 
-  //			--choose odd or prime#  for barSides, and
-  //			--choose pdd or prime# for barSlices of approx. barSides *(rbend/rbar)
-  // EXAMPLE: rbend = 1, rbar = 0.5, barSlices =23, barSides = 11.
-  
-    // Create a (global) array to hold this torus's vertices:
-   var torVerts = [];
-  //	Each slice requires 2*barSides vertices, but 1st slice will skip its first 
-  // triangle and last slice will skip its last triangle. To 'close' the torus,
-  // repeat the first 2 vertices at the end of the triangle-strip.  Assume 7
-  
-  var phi=0, theta=0;										// begin torus at angles 0,0
-  var thetaStep = 2*Math.PI/barSlices;	// theta angle between each bar segment
-  var phiHalfStep = Math.PI/barSides;		// half-phi angle between each side of bar
-                                        // (WHY HALF? 2 vertices per step in phi)
-    // s counts slices of the bar; v counts vertices within one slice; j counts
-    // array elements (Float32) (vertices*#attribs/vertex) put in torVerts array.
-    for(s=0,j=0; s<barSlices; s++) {		// for each 'slice' or 'ring' of the torus:
-      for(v=0; v< 2*barSides; v++, j+=4) {		// for each vertex in this slice:
-        if(v%2==0)	{	// even #'d vertices at bottom of slice,
-          torVerts[j  ] = (rbend + rbar*Math.cos((v)*phiHalfStep)) * 
-                                               Math.cos((s)*thetaStep);
-                  //	x = (rbend + rbar*cos(phi)) * cos(theta)
-          torVerts[j+1] = (rbend + rbar*Math.cos((v)*phiHalfStep)) *
-                                               Math.sin((s)*thetaStep);
-                  //  y = (rbend + rbar*cos(phi)) * sin(theta) 
-          torVerts[j+2] = -rbar*Math.sin((v)*phiHalfStep);
-                  //  z = -rbar  *   sin(phi)
-          torVerts[j+3] = 1.0;		// w
-        }
-        else {				// odd #'d vertices at top of slice (s+1);
-                      // at same phi used at bottom of slice (v-1)
-          torVerts[j  ] = (rbend + rbar*Math.cos((v-1)*phiHalfStep)) * 
-                                               Math.cos((s+1)*thetaStep);
-                  //	x = (rbend + rbar*cos(phi)) * cos(theta)
-          torVerts[j+1] = (rbend + rbar*Math.cos((v-1)*phiHalfStep)) *
-                                               Math.sin((s+1)*thetaStep);
-                  //  y = (rbend + rbar*cos(phi)) * sin(theta) 
-          torVerts[j+2] = -rbar*Math.sin((v-1)*phiHalfStep);
-                  //  z = -rbar  *   sin(phi)
-          torVerts[j+3] = 1.0;		// w
-        }
-      }
-    }
-    // Repeat the 1st 2 vertices of the triangle strip to complete the torus:
-        torVerts[j  ] = rbend + rbar;	// copy vertex zero;
-                //	x = (rbend + rbar*cos(phi==0)) * cos(theta==0)
-        torVerts[j+1] = 0.0;
-                //  y = (rbend + rbar*cos(phi==0)) * sin(theta==0) 
-        torVerts[j+2] = 0.0;
-                //  z = -rbar  *   sin(phi==0)
-        torVerts[j+3] = 1.0;	
-        j+=4; // go to next vertex:
-        torVerts[j  ] = (rbend + rbar) * Math.cos(thetaStep);
-                //	x = (rbend + rbar*cos(phi==0)) * cos(theta==thetaStep)
-        torVerts[j+1] = (rbend + rbar) * Math.sin(thetaStep);
-                //  y = (rbend + rbar*cos(phi==0)) * sin(theta==thetaStep) 
-        torVerts[j+2] = 0.0;
-                //  z = -rbar  *   sin(phi==0)
-        torVerts[j+3] = 1.0;		// w
-        appendPositions(torVerts);
-
-        var torColors = [];
-        // generate colors for 600 vertices
-        for(var i = 0; i< 40; i++){
-          torColors = torColors.concat(color);
-        }
-        appendColors(torColors);
-
-}
 
 function makeCube(){
   // 36 vertices
@@ -1502,18 +1201,4 @@ function normal(r)
   var len = Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) + 0.000001; // prevent divide by 0
 
   return [r[0]/len,r[1]/len,r[2]/len];
-}
-
-function changeLightingMode() {
-
-    lightingMode = lightingMode == 1 ? 0 : 1;
-    document.getElementById('LightingMode').innerHTML = lightingMode == 0 ? "Blinn-Phong lighting" : "Phong lighting";
-    console.log("change lighting mode to " + lightingMode);
-}
-
-function changeShadingMode() {
-
-    shadingMode = shadingMode == 1 ? 0 : 1;
-    document.getElementById('shadingMode').innerHTML = shadingMode == 0 ? "Phong shadinging" : "Gouraud shading";
-    console.log("change shading mode to " + shadingMode);
 }
