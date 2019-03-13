@@ -29,11 +29,11 @@ var g_EyeX = 20.00,
     g_EyeZ = 2.00;
 //var g_EyeX = 0.30, g_EyeY = 0.30, g_EyeZ = 4.0; // Eye position
 var g_LookAtX = 0.0, g_LookAtY = 0.0, g_LookAtZ = 0.0;// look-at point z-coordinate
-var g_LambAtX = 5.0, g_LambAtY = 5.0, g_LambAtZ = 20.0;
+var g_LambAtX = 5.0, g_LambAtY = 5.0, g_LambAtZ = -10.0;
 var lampAmbiR = 1.0, lampAmbiG = 1.0, lampAmbiB = 1.0;
 var lampDiffR = 1.0, lampDiffG = 1.0, lampDiffB = 1.0;
 var lampSpecR = 1.0, lampSpecG = 1.0, lampSpecB = 1.0;
-//var lampOn = true; var headLightOn = true;
+var lampOn = true; var headLightOn = true;
 
 var mat_sphere = 1;
 var viewMatrix = new Matrix4();
@@ -58,6 +58,8 @@ var FizzyText = function() {
   this.lampSpecB = 1.0;
   this.lightingMode = 'Blinn-Phong lighting';
   this.shadingMode = 'Gouraud shading';
+  this.lampOn = 'true';
+  this.headLightOn = 'true'
 };
 
 var obj = { 
@@ -70,6 +72,14 @@ var obj = {
     shadingMode = shadingMode == 1 ? 0 : 1;
     text.shadingMode = shadingMode == 0 ? 'Phong shadinging' : 'Gouraud shading';
     console.log("change shading mode to " + shadingMode);
+  },
+  turnDownHeadLight:function(){
+    headLightOn = headLightOn ? false : true;
+    text.headLightOn = ''+headLightOn;
+  },
+  turnDownLamp: function(){
+    lampOn=lampOn ? false : true;
+    text.lampOn = ''+lampOn;
   }
 };
 
@@ -81,6 +91,13 @@ window.onload = function() {
   // add controls to GUI
   gui.add(text, 'position').listen();
   gui.add(text, 'speed', -200, 200).onChange(setSpeed);
+
+  var f1 = gui.addFolder('light control');
+  f1.add(text, 'lampOn').listen();
+  f1.add(obj, 'turnDownLamp').name('turn down/up');
+  f1.add(text, 'headLightOn').listen();
+  f1.add(obj, 'turnDownHeadLight').name('turn down/up');
+  f1.open();
 
   var f2 = gui.addFolder('lamp');
   f2.add(text, 'lampAmbiR',0, 1).onChange(seLampAmbiR);
@@ -95,10 +112,10 @@ window.onload = function() {
   f2.open();
 
   var f3 = gui.addFolder('lighting & shading');
-  gui.add(text, 'lightingMode').listen();
-  gui.add(obj, 'changeLightingMode').name('change lighting');
-  gui.add(text, 'shadingMode').listen();
-  gui.add(obj, 'changeShadingMode').name('change shading');
+  f3.add(text, 'lightingMode').listen();
+  f3.add(obj, 'changeLightingMode').name('change lighting');
+  f3.add(text, 'shadingMode').listen();
+  f3.add(obj, 'changeShadingMode').name('change shading');
   f3.open();
 };
 
@@ -312,58 +329,11 @@ function myMouseUp(ev,canvas) {
 };
 
 
-function dragQuat(xdrag, ydrag) {
-  //==============================================================================
-  // Called when user drags mouse by 'xdrag,ydrag' as measured in CVV coords.
-  // We find a rotation axis perpendicular to the drag direction, and convert the 
-  // drag distance to an angular rotation amount, and use both to set the value of 
-  // the quaternion qNew.  We then combine this new rotation with the current 
-  // rotation stored in quaternion 'qTot' by quaternion multiply.  Note the 
-  // 'draw()' function converts this current 'qTot' quaternion to a rotation 
-  // matrix for drawing. 
-    var res = 5;
-    var qTmp = new Quaternion(0,0,0,1);
-    
-    var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
-    // console.log('xdrag,ydrag=',xdrag.toFixed(5),ydrag.toFixed(5),'dist=',dist.toFixed(5));
-    qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
-    // (why add tiny 0.0001? To ensure we never have a zero-length rotation axis)
-                // why axis (x,y,z) = (-yMdrag,+xMdrag,0)? 
-                // -- to rotate around +x axis, drag mouse in -y direction.
-                // -- to rotate around +y axis, drag mouse in +x direction.
-                
-    qTmp.multiply(qNew,qTot);     // apply new rotation to current rotation. 
-    //--------------------------
-    // IMPORTANT! Why qNew*qTot instead of qTot*qNew? (Try it!)
-    // ANSWER: Because 'duality' governs ALL transformations, not just matrices. 
-    // If we multiplied in (qTot*qNew) order, we would rotate the drawing axes
-    // first by qTot, and then by qNew--we would apply mouse-dragging rotations
-    // to already-rotated drawing axes.  Instead, we wish to apply the mouse-drag
-    // rotations FIRST, before we apply rotations from all the previous dragging.
-    //------------------------
-    // IMPORTANT!  Both qTot and qNew are unit-length quaternions, but we store 
-    // them with finite precision. While the product of two (EXACTLY) unit-length
-    // quaternions will always be another unit-length quaternion, the qTmp length
-    // may drift away from 1.0 if we repeat this quaternion multiply many times.
-    // A non-unit-length quaternion won't work with our quaternion-to-matrix fcn.
-    // Matrix4.prototype.setFromQuat().
-  //  qTmp.normalize();           // normalize to ensure we stay at length==1.0.
-    qTot.copy(qTmp);
-    // show the new quaternion qTot on our webpage in the <div> element 'QuatValue'
-    document.getElementById('QuatValue').innerHTML= 
-                               '\t X=' +qTot.x.toFixed(res)+
-                              'i\t Y=' +qTot.y.toFixed(res)+
-                              'j\t Z=' +qTot.z.toFixed(res)+
-                              'k\t W=' +qTot.w.toFixed(res)+
-                              '<br>length='+qTot.length().toFixed(res);
-  };
-
-
 function keydown(ev, gl) {// Called when user hits any key button;
   
     if (ev.keyCode == 77) { // m key
         mat_sphere = (mat_sphere + 1) % 20;
-        console.log("change the material");
+        console.log("change the sphere's material");
     }
     else if(ev.keyCode == 39) { // right arrow - step right
     up = [0,1,0]
@@ -585,14 +555,26 @@ function drawView(gl){
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl0.K_shiny, 10));     // Kshiny 
 
   lamp0.I_pos.elements.set([g_LambAtX, g_LambAtY, g_LambAtZ]);
-  lamp0.I_ambi.elements.set([lampAmbiR, lampAmbiG, lampAmbiB]);
-  lamp0.I_diff.elements.set([lampDiffR, lampDiffG, lampDiffB]);
-  lamp0.I_spec.elements.set([lampSpecR, lampSpecG, lampSpecB]);
+  if (lampOn) {
+        lamp0.I_ambi.elements.set([lampAmbiR, lampAmbiG, lampAmbiB]);
+        lamp0.I_diff.elements.set([lampDiffR, lampDiffG, lampDiffB]);
+        lamp0.I_spec.elements.set([lampSpecR, lampSpecG, lampSpecB]);
+    } else {
+        lamp0.I_ambi.elements.set([0.0, 0.0, 0.0]);
+        lamp0.I_diff.elements.set([0.0, 0.0, 0.0]);
+        lamp0.I_spec.elements.set([0.0, 0.0, 0.0]);
+    }
    
   headLight.I_pos.elements.set([g_EyeX, g_EyeY, g_EyeZ]);
-  headLight.I_ambi.elements.set([1.0, 1.0, 1.0]);
-  headLight.I_diff.elements.set([1.0, 1.0, 1.0]);
-  headLight.I_spec.elements.set([1.0, 1.0, 1.0]);
+  if (headLightOn) {
+        headLight.I_ambi.elements.set([1.0, 1.0, 1.0]);
+        headLight.I_diff.elements.set([1.0, 1.0, 1.0]);
+        headLight.I_spec.elements.set([1.0, 1.0, 1.0]);
+    } else {
+        headLight.I_ambi.elements.set([0.0, 0.0, 0.0]);
+        headLight.I_diff.elements.set([0.0, 0.0, 0.0]);
+        headLight.I_spec.elements.set([0.0, 0.0, 0.0]);
+    }
   
   // update the light sources location
   gl.uniform3fv(lamp0.u_pos, lamp0.I_pos.elements.slice(0, 3));
@@ -611,7 +593,7 @@ function draw(gl) {
   // Draw a new on-screen image.
   gl.useProgram(g_myShader);
   modelMatrix.setIdentity(); 
- modelMatrix.setTranslate(0.0, 0.0, 0.0);
+  modelMatrix.setTranslate(0.0, 0.0, 0.0);
   modelMatrix.rotate(-70,1,0,0);
   pushMatrix(modelMatrix);     // SAVE world coord system;
   modelMatrix.setTranslate(0.0, 0.0, 0.0);
@@ -637,6 +619,7 @@ function draw(gl) {
   modelMatrix.rotate(currentAngle*3, 0, 0, 1);
   drawCube(gl);
   modelMatrix = popMatrix();
+
   // draw center spinning sphere
   var matl1 = new Material(mat_sphere);
   gl.uniform3fv(matl0.uLoc_Ke, matl1.K_emit.slice(0, 3)); // Ke emissive
@@ -644,6 +627,7 @@ function draw(gl) {
   gl.uniform3fv(matl0.uLoc_Kd, matl1.K_diff.slice(0, 3)); // Kd diffuse
   gl.uniform3fv(matl0.uLoc_Ks, matl1.K_spec.slice(0, 3)); // Ks specular
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl1.K_shiny, 10)); // Kshiny
+  viewMatrix.rotate(90.0, 1, 0, 0);
   modelMatrix.setTranslate(0, 0, 0);
   modelMatrix.scale(0.5, 0.5, 0.5);
   modelMatrix.rotate(currentAngle, 0, 0, 1);
@@ -658,7 +642,7 @@ function draw(gl) {
   gl.uniform3fv(matl0.uLoc_Kd, matl2.K_diff.slice(0, 3)); // Kd diffuse
   gl.uniform3fv(matl0.uLoc_Ks, matl2.K_spec.slice(0, 3)); // Ks specular
   gl.uniform1i(matl0.uLoc_Kshiny, parseInt(matl2.K_shiny, 10)); // Kshiny
-  modelMatrix.setTranslate(2,0.8,0.3);
+  modelMatrix.setTranslate(1.4,0.3,-1.0);
   // spinning BASE dodecahedron;
  var base = 0.15;
   modelMatrix.translate(0.42, 0.4, 0.0); 
