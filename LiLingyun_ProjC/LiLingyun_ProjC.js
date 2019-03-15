@@ -80,6 +80,10 @@ var obj = {
   turnDownLamp: function(){
     lampOn=lampOn ? false : true;
     text.lampOn = ''+lampOn;
+  },
+  changeTextureMode: function(){
+    textureMode = textureMode == 1 ? 0 : 1;
+    console.log("change textureMode to picture");
   }
 };
 
@@ -117,6 +121,7 @@ window.onload = function() {
   f3.add(text, 'shadingMode').listen();
   f3.add(obj, 'changeShadingMode').name('change shading');
   f3.open();
+  gui.add(obj, 'changeTextureMode').name('change texture');
 };
 
 
@@ -536,6 +541,7 @@ function drawView(gl){
   // Calculate the matrix to transform the normal based on the model matrix
   gl.uniform1i(uLoc_lightingMode, lightingMode);
   gl.uniform1i(uLoc_shadingMode, shadingMode);
+  gl.uniform1i(uLoc_textureMode, textureMode);
 
   eyePosWorld.set([g_EyeX, g_EyeY, g_EyeZ]);
   gl.uniform3fv(uLoc_eyePosWorld, eyePosWorld); 
@@ -748,6 +754,8 @@ function drawMess(gl,size) {
 
 function drawCube(gl){
   pushMatrix(modelMatrix);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, textureImg);
   updateModelMatrix(modelMatrix);
   // Pass the model view projection matrix to u_MvpMatrix
   mvpMatrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
@@ -1012,7 +1020,11 @@ function makeMess(){
     normals = normals.concat(nor, nor, nor);
   }
   appendNormals(normals);
-
+  var tex = [];
+  for(var i = 0; i< 180; i++){
+    tex = tex.concat([0,0]);
+  }
+  appendTex(tex);
 }
 
 function makeGroundGrid() {
@@ -1028,7 +1040,8 @@ function makeGroundGrid() {
   var gndVerts = [];
             // draw a grid made of xcount+ycount lines; 2 vertices per line.
   var gndNorms = [];     
-  var gndColrs = [];     
+  var gndColrs = [];    
+  var gndTex = []; 
   var xgap = xymax/(xcount-1);    // HALF-spacing between lines in x,y;
   var ygap = xymax/(ycount-1);    // (why half? because v==(0line number/2))
   
@@ -1072,9 +1085,13 @@ function makeGroundGrid() {
   for(var j=0; j< 400; j++){
     gndNorms = gndNorms.concat([0,0,1]);
   }
+  for(var j=0; j< 400; j++){
+    gndTex = gndTex.concat([0,0]);
+  }
   appendPositions(gndVerts);
   appendNormals(gndNorms);
   appendColors(gndColrs);
+  appendTex(gndTex);
 }
 
 
@@ -1139,6 +1156,15 @@ function makeCube(){
     0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0 // v4-v7-v6-v5 back
   ];
 
+  var texCoords = [
+    1.0, 1.0,   0.0, 1.0,   0.0, 0.0,   1.0, 1.0,  0.0, 0.0,  1.0, 0.0,    // v0-v1-v2-v3 front
+    0.0, 1.0,   0.0, 0.0,   1.0, 0.0,   0.0, 1.0,  1.0, 0.0,  1.0, 1.0,    // v0-v3-v4-v5 right
+    1.0, 0.0,   1.0, 1.0,   0.0, 1.0,   1.0, 0.0,  0.0, 1.0,  0.0, 0.0,    // v0-v5-v6-v1 up
+    1.0, 1.0,   0.0, 1.0,   0.0, 0.0,   1.0, 1.0,  0.0, 0.0,  1.0, 0.0,    // v1-v6-v7-v2 left
+    0.0, 0.0,   1.0, 0.0,   1.0, 1.0,   0.0, 0.0,  1.0, 1.0,  0.0, 1.0,    // v7-v4-v3-v2 down
+    0.0, 0.0,   1.0, 0.0,   1.0, 1.0,   0.0, 0.0,  1.0, 1.0,  0.0, 1.0     // v4-v7-v6-v5 back
+  ];
+
 
  appendPositions(cubeVert);
  
@@ -1150,6 +1176,7 @@ function makeCube(){
   cubeColr = cubeColr.concat(seColr);
   appendColors(cubeColr);
   appendNormals(normals);
+  appendTex(texCoords);
 }
 
 function resize() {

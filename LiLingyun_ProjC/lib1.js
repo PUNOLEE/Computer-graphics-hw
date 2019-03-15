@@ -27,7 +27,7 @@ var VSHADER_SOURCE =
   'attribute vec4 a_Position; \n' +		// vertex position (model coord sys)
   'attribute vec4 a_Normal; \n' +			// vertex normal vector (model coord sys)
   'attribute vec4 a_Color;\n' +
-										
+	'attribute vec2 a_TexCoord;\n' +									
 	//-------------UNIFORMS: values set from JavaScript before a drawing command.
 // 	'uniform vec3 u_Kd; \n' +						// Phong diffuse reflectance for the 
  																			// entire shape. Later: as vertex attrib.
@@ -52,7 +52,8 @@ var VSHADER_SOURCE =
   'varying vec4 v_Position; \n' +				
   'varying vec3 v_Normal; \n' +					// Why Vec3? its not a point, hence w==0
   'varying vec4 v_Color;\n' +
-	//-----------------------------------------------------------------------------
+	'varying vec2 v_TexCoord;\n' +
+  //-----------------------------------------------------------------------------
   'void main() { \n' +
   'if(shadingMode == 0){\n' +
 		// Compute CVV coordinate values from our given vertex. This 'built-in'
@@ -63,6 +64,7 @@ var VSHADER_SOURCE =
 		// (interpolated between vertices for our drawing primitive (TRIANGLE)).
   '  v_Position = u_ModelMatrix * a_Position; \n' +
   '  v_Color = a_Color;\n' +
+  '  v_TexCoord = a_TexCoord;\n' +
 		// 3D surface normal of our vertex, in world coords.  ('varying'--its value
 		// gets interpolated (in world coords) for each pixel's fragment shader.
   '  v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));\n' +
@@ -78,6 +80,7 @@ var VSHADER_SOURCE =
     // (interpolated between vertices for our drawing primitive (TRIANGLE)).
   '  v_Position = u_ModelMatrix * a_Position; \n' +
   '  v_Color = a_Color;\n' +
+  '  v_TexCoord = a_TexCoord;\n' +
     // 3D surface normal of our vertex, in world coords.  ('varying'--its value
     // gets interpolated (in world coords) for each pixel's fragment shader.
   '  v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));\n' +
@@ -173,8 +176,12 @@ var FSHADER_SOURCE =
   'uniform vec3 u_eyePosWorld; \n' + 	// Camera/eye location in world coords.
   'uniform int lightingMode;\n' +
   'uniform int shadingMode;\n' +
-  
+
+  'uniform int textureMode;\n' +
+  'uniform sampler2D u_Sampler0;\n' +
+
  	//-------------VARYING:Vertex Shader values sent per-pixel to Fragment shader: 
+  'varying vec2 v_TexCoord;\n' +
   'varying vec4 v_Color;\n' +
   'varying vec3 v_Normal;\n' +				// Find 3D surface normal at each pix
   'varying vec4 v_Position;\n' +			// pixel's 3D pos too -- in 'world' coords
@@ -186,7 +193,26 @@ var FSHADER_SOURCE =
      	// Normalize! !!IMPORTANT!! TROUBLE if you don't! 
      	// normals interpolated for each pixel aren't 1.0 in length any more!
   'if(shadingMode == 1){\n' +
-	'  gl_FragColor = v_Color;\n' +
+  'if(textureMode == 0){\n' +
+  '  gl_FragColor = v_Color;\n' + 
+  '};\n' +
+  'if(textureMode == 1){\n' +
+  '  vec3 normal = normalize(v_Normal); \n' +
+//  '  vec3 normal = v_Normal; \n' +
+      // Find the unit-length light dir vector 'L' (surface pt --> light):
+  '  vec3 lightDirection = normalize(u_LampSet[0].pos - v_Position.xyz);\n' +
+  '  vec3 lightDirection_2 = normalize(u_headLight[0].pos - v_Position.xyz);\n' +
+      // Find the unit-length eye-direction vector 'V' (surface pt --> camera)
+  '  vec3 eyeDirection = normalize(u_eyePosWorld - v_Position.xyz); \n' +
+      // The dot product of (unit-length) light direction and the normal vector
+      // (use max() to discard any negatives from lights below the surface) 
+      // (look in GLSL manual: what other functions would help?)
+      // gives us the cosine-falloff factor needed for the diffuse lighting term:
+  '  float nDotL = max(dot(lightDirection, normal), 0.0); \n' +
+  '  float nDotL_2 = max(dot(lightDirection_2, normal), 0.0);\n' +
+  '  vec4 color0 = texture2D(u_Sampler0, v_TexCoord);\n' +
+	'  gl_FragColor = vec4(color0.rgb * nDotL * nDotL_2, color0.a);\n' +
+  '};\n' +
   '};\n' +
 
   'if(shadingMode == 0){\n' +
@@ -233,7 +259,14 @@ var FSHADER_SOURCE =
   '  vec3 ambient = u_LampSet[0].ambi * u_MatlSet[0].ambi + u_headLight[0].ambi * u_MatlSet[0].ambi ;\n' +
   '  vec3 diffuse = u_LampSet[0].diff * v_Kd * nDotL + u_headLight[0].diff * v_Kd * nDotL_2;\n' +
   '  vec3 speculr = u_LampSet[0].spec * u_MatlSet[0].spec * e64 + u_headLight[0].spec * u_MatlSet[0].spec * e64_2;\n' +
+  'if(textureMode == 0){\n' +
   '  gl_FragColor = vec4((emissive + ambient + diffuse + speculr)*v_Color.rgb , 1.0);\n' +
+  '};\n' +
+  'if(textureMode == 1){\n' +
+  '  vec4 color0 = texture2D(u_Sampler0, v_TexCoord);\n' +
+  '  gl_FragColor = vec4((emissive + ambient + diffuse + speculr)*v_Color.rgb , 1.0) * color0;\n' +   
+  '};\n' +
+
   '}\n' +
   '}\n';
 
@@ -246,16 +279,19 @@ var positionDimensions = 4;
 var colorDimensions = 4;
 var normalDimensions = 3;
 var pointSizeDimensions = 1;
+var texCoordDimensions = 2;
 var positions = new Float32Array(numVertices*positionDimensions);
 var colors = new Float32Array(numVertices*colorDimensions);
 var normals = new Float32Array(numVertices*normalDimensions);
 var pointSizes = new Float32Array(numVertices*pointSizeDimensions);
+var texCoords = new Float32Array(numVertices*texCoordDimensions);
+
 for(var i = 0; i < numVertices; i++) pointSizes[i] = 10.0; //default point-size is 10
 for(var i = 0; i < numVertices*normalDimensions; i++) {
 normals[i] = .5; //set  non-zero default point-size
 }
 var FSIZE = positions.BYTES_PER_ELEMENT;
-var ipos = icolors = inormals = ipointSizes = 0;
+var ipos = icolors = inormals = ipointSizes = itexCoords = 0;
 // global vars that contain the values we send thru those uniforms,
 //  ... for our camera:
 var	eyePosWorld = new Float32Array(3);	// x,y,z in world coords
@@ -272,17 +308,23 @@ var uLoc_MvpMatrix 		= false;
 var uLoc_NormalMatrix = false;
 var uLoc_lightingMode = false;
 var uLoc_shadingMode = false;
+var uLoc_textureMode = false;
 
 var lightingMode = 0;
 var shadingMode = 0;
+var textureMode = 0;
 
 var g_myShader;
+var textureImg;
 //	... for our first light source:   (stays false if never initialized)
 var lamp0 = new LightsT();
 var headLight = new LightsT();
 	// ... for our first material:
 var matlSel= MATL_RED_PLASTIC;				// see keypress(): 'm' key changes matlSel
 var matl0 = new Material(matlSel);
+
+
+
 
 function init(){
   // Retrieve <canvas> element
@@ -314,7 +356,12 @@ function init(){
   gl.enable(gl.CULL_FACE);   // draw the back side of triangles
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   // Clear the color buffer and the depth buffer
-
+  // Set texture
+  textureImg = initTextures(gl)
+  if (!textureImg) {
+    console.log('Failed to intialize the texture.');
+    return;
+  }
   // Create, save the storage locations of uniform variables: ... for the scene
   // (Version 03: changed these to global vars (DANGER!) for use inside any func)
   uLoc_eyePosWorld  = gl.getUniformLocation(g_myShader, 'u_eyePosWorld');
@@ -323,8 +370,10 @@ function init(){
   uLoc_NormalMatrix = gl.getUniformLocation(g_myShader, 'u_NormalMatrix');
   uLoc_lightingMode = gl.getUniformLocation(g_myShader, 'lightingMode');
   uLoc_shadingMode = gl.getUniformLocation(g_myShader, 'shadingMode');
+  uLoc_textureMode = gl.getUniformLocation(g_myShader, 'textureMode');
   gl.uniform1i(uLoc_lightingMode, lightingMode);
   gl.uniform1i(uLoc_shadingMode, shadingMode);
+  gl.uniform1i(uLoc_textureMode, textureMode);
   if (!uLoc_eyePosWorld ||
       !uLoc_ModelMatrix	|| !uLoc_MvpMatrix || !uLoc_NormalMatrix) {
   	console.log('Failed to get GPUs matrix storage locations');
@@ -412,6 +461,13 @@ function bufferSetup(gl) {
     console.log('Failed to get the storage location of a_Normal');
     return -1;
   }
+
+  var a_TexCoord = gl.getAttribLocation(g_myShader, 'a_TexCoord');
+  if(a_TexCoord < 0)
+  {
+    console.log('Failed to get the storage location of a_Normal');
+    return -1;
+  }
   
 
   //The VBO is setup so that it looks like:
@@ -430,6 +486,10 @@ function bufferSetup(gl) {
 
   gl.vertexAttribPointer(a_Normal, normalDimensions, gl.FLOAT, false, FSIZE * normalDimensions, offset);
   gl.enableVertexAttribArray(a_Normal);
+  offset += FSIZE*numVertices*normalDimensions;
+  
+  gl.vertexAttribPointer(a_TexCoord, 2, gl.FLOAT, false, FSIZE * texCoordDimensions, offset);
+  gl.enableVertexAttribArray(a_TexCoord);  // Enable the buffer assignment
 
 }
 
@@ -456,8 +516,18 @@ function appendColors(arr){
 function appendNormals(arr){
   normals = Float32Edit(normals,arr,inormals);
   inormals += arr.length;
-  if(icolors > numVertices*normalDimensions){
+  if(inormals > numVertices*normalDimensions){
     console.log('Warning! Appending more than ' + numVertices + ' normals to the VBO will overwrite existing data');
+    console.log('Hint: look at changing numVertices in lib.js');
+  }
+  bufferSetup(gl);
+}
+
+function appendTex(arr){
+  texCoords = Float32Edit(texCoords,arr,itexCoords);
+  itexCoords += arr.length;
+  if(itexCoords > numVertices*texCoordDimensions){
+    console.log('Warning! Appending more than ' + numVertices + ' texCoords to the VBO will overwrite existing data');
     console.log('Hint: look at changing numVertices in lib.js');
   }
   bufferSetup(gl);
@@ -505,13 +575,9 @@ function updateMvpMatrix(matrix){
   gl.uniformMatrix4fv(uLoc_MvpMatrix, false, matrix.elements);
 }
 
-// function updateProjMatrix(matrix){
-//   gl.uniformMatrix4fv(u_ProjMatrix, false, matrix.elements);
-// }
-
 //Concatenate all attributes into a single array
 function CreateVBO(){
-  return Float32Concat(positions,Float32Concat(colors,normals));
+  return Float32Concat(positions,Float32Concat(colors,Float32Concat(normals, texCoords)));
 }
 
 //Reset all attributes
@@ -523,4 +589,40 @@ function WipeVertices(){
   ipos = icolors = inormals = ipointSizes = 0;
   bufferSetup(gl);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
+function initTextures(gl) {
+  var texture = gl.createTexture();   // Create a texture object
+  if (!texture) {
+    console.log('Failed to create the texture object');
+    return null;
+  }
+
+  var image = new Image();  // Create a image object
+  image.crossOrigin = "anonymous";
+  if (!image) {
+    console.log('Failed to create the image object');
+    return null;
+  }
+  var u_Sampler0 = gl.getUniformLocation(g_myShader, 'u_Sampler0');
+
+  image.onload = function() {
+  // Write the image data to texture object
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);  // Flip the image Y coordinate
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+  gl.uniform1i(u_Sampler0, 0);
+
+  gl.bindTexture(gl.TEXTURE_2D, null); // Unbind texture
+  };
+
+  // Tell the browser to load an Image
+  image.src = 'rick-and-morty.png';
+
+  return texture;
 }
